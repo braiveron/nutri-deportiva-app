@@ -1,3 +1,31 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;700&family=Oswald:wght@400;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+body {
+  font-family: 'Barlow', sans-serif;
+  /* Fondo infinito: Luz blanca en el centro, gris suave en los bordes */
+  background: radial-gradient(circle at center, #ffffff 0%, #e5e7eb 100%);
+  background-attachment: fixed; /* Evita que el fondo se mueva */
+  height: 100vh;
+  overflow-x: hidden; /* Evita scroll horizontal */
+  /* Permitimos scroll vertical solo si la pantalla es muy pequeña, 
+     pero intentaremos que no sea necesario */
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Oswald', sans-serif;
+  text-transform: uppercase;
+}
+
+/* Animación suave para la aparición */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}

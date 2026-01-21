@@ -3,6 +3,7 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const supabase = require("./config/supabaseClient"); // Conexión a Supabase
 const { calcularMacros } = require("./utils/formulas"); // Tu cerebro matemático
+const { generarReceta } = require("./utils/aiChef");
 
 // Configuración de variables de entorno
 dotenv.config();
@@ -89,6 +90,32 @@ app.post("/api/calcular-plan", async (req, res) => {
     res
       .status(500)
       .json({ error: "Hubo un error interno calculando los macros" });
+  }
+});
+
+// RUTA NUEVA: Generador de Recetas con IA
+app.post("/api/crear-receta", async (req, res) => {
+  const { ingredientes, tipoComida, macrosObjetivo } = req.body;
+
+  if (!ingredientes || ingredientes.length === 0) {
+    return res.status(400).json({ error: "¡Faltan los ingredientes!" });
+  }
+
+  try {
+    console.log("👨‍🍳 El Chef está cocinando con:", ingredientes);
+
+    // Llamamos a Gemini
+    const receta = await generarReceta(
+      ingredientes,
+      tipoComida,
+      macrosObjetivo,
+    );
+
+    res.json({ exito: true, receta: receta });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: "Error generando la receta", detalle: error.message });
   }
 });
 

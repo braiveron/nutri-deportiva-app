@@ -1,162 +1,136 @@
 import { useState } from 'react';
 
-// 1. Diccionario de descripciones (VERSIÓN GENERAL DEPORTIVA)
 const DESCRIPCIONES = {
-  sedentario: "Poco movimiento (Trabajo de oficina, estar sentado la mayor parte del día).",
-  ligero: "Actividad ligera 1-3 días/semana (Caminar rápido, Yoga, Natación suave).",
-  moderado: "Entrenamiento moderado 3-5 días/semana (Gimnasio, Clases de baile, Ciclismo recreativo).",
-  intenso: "Entrenamiento fuerte 6-7 días/semana (CrossFit, Deportes competitivos, Gym intenso).",
-  muy_intenso: "Alto Rendimiento (Doble turno de entrenamiento diario, trabajo físico muy pesado)."
+  sedentario: "Oficina / Poco Movimiento",
+  ligero: "1-3 días (Yoga, Caminata)",
+  moderado: "3-5 días (Gym, Trote)",
+  intenso: "6-7 días (CrossFit, Competencia)",
+  muy_intenso: "Doble Turno / Atleta Élite"
 };
 
-export default function Calculator() {
+export default function Calculator({ onCalculationSuccess }) {
   const [formData, setFormData] = useState({
-    peso: '',
-    altura: '',
-    edad: '',
-    genero: 'masculino',
-    nivel_actividad: 'intenso' // Valor por defecto
+    peso: '', altura: '', edad: '', genero: 'masculino', nivel_actividad: 'intenso'
   });
-
-  const [resultado, setResultado] = useState(null);
+  
+  // Estado local para mostrar la tarjeta aquí mismo
+  const [resultadoLocal, setResultadoLocal] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
     try {
       const response = await fetch('http://localhost:5000/api/calcular-plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          peso: Number(formData.peso),
-          altura: Number(formData.altura),
-          edad: Number(formData.edad),
-          genero: formData.genero,
-          nivel_actividad: formData.nivel_actividad,
-          user_email: 'test@nutriaerea.com'
+          peso: Number(formData.peso), altura: Number(formData.altura),
+          edad: Number(formData.edad), genero: formData.genero,
+          nivel_actividad: formData.nivel_actividad, user_email: 'test@nutriaerea.com'
         }),
       });
-
       const data = await response.json();
-      setResultado(data.plan);
+      
+      // 1. Guardamos el resultado LOCALMENTE para verlo en la tarjeta
+      setResultadoLocal(data.plan);
+      
+      // 2. Avisamos al PADRE (App.jsx) para que active el Chef
+      if(onCalculationSuccess) onCalculationSuccess(data.plan);
+
     } catch (error) {
-      console.error('Error:', error);
-      alert('Hubo un error conectando con el servidor');
+      console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl p-6 mt-10">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-2">Calculadora Nutricional</h2>
+    <div className="w-full max-w-5xl flex flex-col md:flex-row justify-center items-start gap-8 animate-fade-in relative z-20">
       
-      <form onSubmit={handleSubmit} className="space-y-5">
-        
-        {/* FILA 1: Peso y Altura */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Peso (kg)</label>
-            <input 
-              type="number" name="peso" placeholder="70"
-              value={formData.peso} onChange={handleChange}
-              className="w-full rounded-md border-gray-300 border p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none" 
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Altura (cm)</label>
-            <input 
-              type="number" name="altura" placeholder="175"
-              value={formData.altura} onChange={handleChange}
-              className="w-full rounded-md border-gray-300 border p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none" 
-              required
-            />
-          </div>
-        </div>
+      {/* TARJETA FORMULARIO */}
+      <div className="bg-white border-2 border-gray-200 shadow-2xl p-6 w-full max-w-md relative">
+        <div className="absolute top-0 right-0 w-8 h-8 bg-gray-100 -z-10 transform rotate-45 translate-x-4 -translate-y-4"></div>
 
-        {/* FILA 2: Edad y Género */}
-        <div className="grid grid-cols-2 gap-4">
-            <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Edad</label>
-                <input 
-                type="number" name="edad" placeholder="30"
-                value={formData.edad} onChange={handleChange}
-                className="w-full rounded-md border-gray-300 border p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none" 
-                required
-                />
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase">Peso (kg)</label>
+                <input type="number" name="peso" placeholder="70" value={formData.peso} onChange={handleChange}
+                  className="w-full bg-gray-50 border border-gray-300 font-bold text-lg px-3 py-2 focus:outline-none focus:border-sportRed focus:bg-white transition-colors" required />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-gray-500 uppercase">Altura (cm)</label>
+                <input type="number" name="altura" placeholder="175" value={formData.altura} onChange={handleChange}
+                  className="w-full bg-gray-50 border border-gray-300 font-bold text-lg px-3 py-2 focus:outline-none focus:border-sportRed focus:bg-white transition-colors" required />
+              </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <label className="text-xs font-bold text-gray-500 uppercase">Edad</label>
+                    <input type="number" name="edad" placeholder="25" value={formData.edad} onChange={handleChange}
+                    className="w-full bg-gray-50 border border-gray-300 font-bold text-lg px-3 py-2 focus:outline-none focus:border-sportRed focus:bg-white transition-colors" required />
+                </div>
+                <div>
+                    <label className="text-xs font-bold text-gray-500 uppercase">Género</label>
+                    <select name="genero" onChange={handleChange} className="w-full bg-gray-50 border border-gray-300 font-bold text-base px-3 py-2 focus:outline-none focus:border-sportRed cursor-pointer h-[46px]">
+                    <option value="masculino">MASCULINO</option>
+                    <option value="femenino">FEMENINO</option>
+                    </select>
+                </div>
+            </div>
+
             <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Género</label>
-                <select name="genero" onChange={handleChange} className="w-full rounded-md border-gray-300 border p-2 bg-white">
-                <option value="masculino">Masculino</option>
-                <option value="femenino">Femenino</option>
+                <label className="text-xs font-bold text-gray-500 uppercase">Nivel de Actividad</label>
+                <select name="nivel_actividad" value={formData.nivel_actividad} onChange={handleChange} 
+                    className="w-full bg-gray-50 border border-gray-300 font-bold text-base px-3 py-2 focus:outline-none focus:border-sportRed cursor-pointer mb-1">
+                  <option value="sedentario">SEDENTARIO</option>
+                  <option value="ligero">LIGERO</option>
+                  <option value="moderado">MODERADO</option>
+                  <option value="intenso">INTENSO</option>
+                  <option value="muy_intenso">MUY INTENSO</option>
                 </select>
+                <p className="text-[10px] font-bold text-sportRed uppercase text-right tracking-wide">
+                   {DESCRIPCIONES[formData.nivel_actividad]}
+                </p>
             </div>
-        </div>
 
-        {/* SECCIÓN ACTIVIDAD (MEJORADA) */}
-        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-            <label className="block text-sm font-bold text-gray-800 mb-2">Nivel de Actividad Física</label>
-            
-            <select 
-                name="nivel_actividad" 
-                value={formData.nivel_actividad}
-                onChange={handleChange} 
-                className="w-full rounded-md border-gray-300 border p-2 bg-white mb-2"
-            >
-              <option value="sedentario">Sedentario</option>
-              <option value="ligero">Ligero</option>
-              <option value="moderado">Moderado</option>
-              <option value="intenso">Intenso</option>
-              <option value="muy_intenso">Muy Intenso</option>
-            </select>
+            <button type="submit" disabled={loading}
+              className="w-full py-3 bg-sportDark text-white font-display font-bold text-xl uppercase tracking-wider hover:bg-sportRed transition-colors shadow-lg disabled:opacity-50">
+              {loading ? 'CALCULANDO...' : 'CALCULAR'}
+            </button>
+        </form>
+      </div>
 
-            {/* AQUÍ ESTÁ LA MAGIA: Texto dinámico de ayuda */}
-            <p className="text-sm text-indigo-600 bg-indigo-50 p-2 rounded border border-indigo-100">
-                ℹ️ {DESCRIPCIONES[formData.nivel_actividad]}
-            </p>
-        </div>
+      {/* TARJETA RESULTADOS (Ahora usamos resultadoLocal para asegurar que se vea) */}
+      {resultadoLocal && (
+        <div className="bg-sportDark text-white p-6 w-full max-w-sm border-l-4 border-sportRed flex flex-col justify-center animate-fade-in shadow-2xl relative">
+           
+           <div className="text-center mb-6">
+               <h3 className="text-gray-400 font-bold uppercase tracking-widest text-xs mb-2">Objetivo Diario</h3>
+               <div className="flex items-center justify-center gap-1">
+                  <span className="text-6xl font-display font-bold text-white italic">{resultadoLocal.calorias_diarias}</span>
+                  <span className="text-lg font-bold text-sportRed">KCAL</span>
+               </div>
+           </div>
 
-        <button 
-          type="submit" 
-          className="w-full py-3 px-4 rounded-md shadow-md text-white font-bold bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:bg-gray-400"
-          disabled={loading}
-        >
-          {loading ? 'Calculando...' : 'Obtener mi Plan'}
-        </button>
-      </form>
-
-      {/* RESULTADOS */}
-      {resultado && (
-        <div className="mt-8 p-6 bg-green-50 rounded-xl border border-green-200 animate-fade-in">
-          <h3 className="text-xl font-bold text-green-800 text-center mb-2">Objetivo Diario</h3>
-          
-          <div className="flex justify-center items-end mb-6">
-            <span className="text-5xl font-black text-green-600">{resultado.calorias_diarias}</span>
-            <span className="text-lg text-green-700 ml-2 mb-2 font-medium">kcal</span>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div className="bg-white p-3 rounded-lg shadow-sm border border-green-100">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Proteína</p>
-              <p className="text-xl font-bold text-blue-600">{resultado.macros.proteinas}g</p>
-            </div>
-            <div className="bg-white p-3 rounded-lg shadow-sm border border-green-100">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Carbos</p>
-              <p className="text-xl font-bold text-orange-600">{resultado.macros.carbohidratos}g</p>
-            </div>
-            <div className="bg-white p-3 rounded-lg shadow-sm border border-green-100">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Grasas</p>
-              <p className="text-xl font-bold text-yellow-600">{resultado.macros.grasas}g</p>
-            </div>
-          </div>
+           <div className="space-y-4">
+              <div className="flex justify-between items-center border-b border-gray-700 pb-2">
+                  <span className="text-sm font-bold text-gray-400 uppercase">Proteína</span>
+                  <span className="text-xl font-display font-bold text-blue-400">{resultadoLocal.macros.proteinas}g</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-gray-700 pb-2">
+                  <span className="text-sm font-bold text-gray-400 uppercase">Carbos</span>
+                  <span className="text-xl font-display font-bold text-sportRed">{resultadoLocal.macros.carbohidratos}g</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-gray-700 pb-2">
+                  <span className="text-sm font-bold text-gray-400 uppercase">Grasas</span>
+                  <span className="text-xl font-display font-bold text-yellow-500">{resultadoLocal.macros.grasas}g</span>
+              </div>
+           </div>
         </div>
       )}
     </div>

@@ -1,13 +1,15 @@
-# Dependencias (Pesado, no subir)
-node_modules
-client/node_modules
-server/node_modules
+# Dependencias (Pesadas, no se suben)
+node_modules/
+client/node_modules/
+server/node_modules/
 
-# Seguridad (Claves secretas, NO SUBIR NUNCA)
+# Variables de Entorno (Secretas, NUNCA subir)
 .env
 server/.env
+client/.env
 
-# Archivos de sistema
+# Archivos de sistema/IDE
 .DS_Store
-dist
-build
+.vscode/
+dist/
+build/
