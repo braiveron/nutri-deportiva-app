@@ -1,0 +1,13 @@
+# Dependencias (Pesado, no subir)
+node_modules
+client/node_modules
+server/node_modules
+
+# Seguridad (Claves secretas, NO SUBIR NUNCA)
+.env
+server/.env
+
+# Archivos de sistema
+.DS_Store
+dist
+build
