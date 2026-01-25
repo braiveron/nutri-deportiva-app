@@ -3,79 +3,79 @@ const dotenv = require("dotenv");
 
 dotenv.config();
 
-// Usamos el modelo rápido y gratuito
-const modelName = "gemini-flash-latest";
+// ⚠️ MANTÉN ESTA PARTE EXACTAMENTE COMO LA TIENES QUE TE FUNCIONA ⚠️
+// Si usas "gemini-flash-latest" o "gemini-pro", déjalo así.
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: modelName });
+const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
-// --- FUNCIÓN DE LIMPIEZA INTELIGENTE ---
-function limpiarYParsearJSON(textoSucio) {
+// 👇 AQUÍ EMPIEZA LO NUEVO 👇
+// Aceptamos un 4to parámetro: 'recetasEvitar' (que es un array de nombres)
+const generarReceta = async (
+  ingredientes,
+  tipoComida,
+  macrosObjetivo,
+  recetasEvitar = [],
+) => {
   try {
-    // 1. Quitar bloques de código Markdown (```json ... ```)
-    let textoLimpio = textoSucio
-      .replace(/```json/g, "")
-      .replace(/```/g, "")
-      .trim();
+    // Convertimos la lista de recetas prohibidas en texto para el prompt
+    const listaProhibida =
+      recetasEvitar.length > 0
+        ? `⛔ NO GENERES ESTOS PLATOS (ya los tiene): ${recetasEvitar.join(", ")}. ¡Sé creativo y varía!`
+        : "";
 
-    // 2. BUSQUEDA QUIRÚRGICA: Encontrar el primer '{' y el último '}'
-    const inicio = textoLimpio.indexOf("{");
-    const fin = textoLimpio.lastIndexOf("}");
-
-    if (inicio === -1 || fin === -1) {
-      throw new Error("No se encontró un objeto JSON válido en la respuesta.");
-    }
-
-    // 3. Cortamos solo lo que está entre llaves (incluyéndolas)
-    const jsonString = textoLimpio.substring(inicio, fin + 1);
-
-    // 4. Intentamos convertir a objeto real
-    return JSON.parse(jsonString);
-  } catch (error) {
-    console.error("❌ Falló el parseo del JSON:", error.message);
-    console.error("Texto recibido de la IA:", textoSucio); // Para depurar
-    throw new Error("La IA cocinó algo que no se pudo leer. Intenta de nuevo.");
-  }
-}
-
-async function generarReceta(ingredientes, tipoComida, macrosObjetivo) {
-  try {
-    // Prompt optimizado para ser estricto
     const prompt = `
-      ERES UN CHEF EXPERTO Y UN PROGRAMADOR.
-      
-      TAREA: Crea una receta ${tipoComida} usando: ${ingredientes.join(", ")}.
-      OBJETIVO NUTRICIONAL: Aprox ${macrosObjetivo.calorias} kcal (Prioriza Proteína).
+      Actúa como nutricionista experto.
+      Genera una receta JSON basada en:
+      - Ingredientes: ${ingredientes.join(", ")}
+      - Comida: ${tipoComida}
+      - Objetivo: ${macrosObjetivo.calorias || "Balanceado"} kcal, ${macrosObjetivo.proteinas || "Alto en proteina"}g prot.
 
-      REGLAS CRÍTICAS DE FORMATO:
-      1. RESPONDE SOLAMENTE CON UN JSON VÁLIDO.
-      2. NO escribas introducciones, ni conclusiones, ni markdown.
-      3. NO uses comentarios // dentro del JSON.
+      ${listaProhibida}
 
-      ESTRUCTURA JSON OBLIGATORIA:
+      ⚠️ IMPORTANTE: Responde ÚNICAMENTE con un objeto JSON crudo.
+      Debes incluir EXPLICITAMENTE el campo "carbohidratos" en los macros.
+
+      Estructura obligatoria:
       {
-        "nombre_receta": "Título corto y épico",
-        "tiempo": "Ej: 15 min",
-        "ingredientes": [ 
-           {"item": "Nombre exacto", "cantidad": "Cantidad estimada"} 
-        ],
-        "macros": { "calorias": 0, "proteinas": 0, "carbos": 0, "grasas": 0 },
-        "pasos": ["Paso 1 corto", "Paso 2 corto", "Paso 3 corto"],
-        "tip": "Un consejo breve de experto"
+        "nombre_receta": "Nombre",
+        "tiempo": "ej: 15 min",
+        "ingredientes": [{ "item": "Nombre", "cantidad": "Cant" }],
+        "macros": {
+            "calorias": 0,
+            "proteinas": 0,
+            "carbohidratos": 0,
+            "grasas": 0
+        },
+        "pasos": ["Paso 1", "Paso 2"],
+        "tip": "Tip breve"
       }
     `;
 
-    console.log("👨‍🍳 Chef cocinando...");
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
 
-    // Usamos nuestra función de limpieza
-    const receta = limpiarYParsearJSON(text);
-    return receta;
+    // Limpieza de JSON
+    const jsonStartIndex = text.indexOf("{");
+    const jsonEndIndex = text.lastIndexOf("}") + 1;
+
+    if (jsonStartIndex === -1) throw new Error("No se encontró JSON válido");
+
+    const jsonString = text.substring(jsonStartIndex, jsonEndIndex);
+
+    return JSON.parse(jsonString);
   } catch (error) {
-    // Si algo falla, lanzamos el error para que lo vea el usuario
-    throw error;
+    console.error("❌ Error en AI Chef:", error.message);
+    // Fallback por si explota
+    return {
+      nombre_receta: "Receta Offline",
+      tiempo: "5 min",
+      ingredientes: [{ item: "Error", cantidad: "-" }],
+      macros: { calorias: 0, proteinas: 0, carbohidratos: 0, grasas: 0 },
+      pasos: ["Hubo un error de conexión.", "Intenta de nuevo."],
+      tip: "Verifica tu conexión a Gemini.",
+    };
   }
-}
+};
 
 module.exports = { generarReceta };

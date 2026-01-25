@@ -1,19 +1,22 @@
 import { useState } from 'react';
+import { supabase } from '../supabase'; // Necesitamos importar supabase aquí
 
-export default function RecipeChef({ macros }) {
+export default function RecipeChef({ macros, userId, onRecipeCreated }) {
   const [ingredientes, setIngredientes] = useState('');
-  const [tipoComida, setTipoComida] = useState(''); // Arranca vacío para obligar a elegir
+  const [tipoComida, setTipoComida] = useState('');
   const [receta, setReceta] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false); // Estado para el botón de guardar
+  const [saved, setSaved] = useState(false);   // Para saber si ya se guardó
 
   const cocinar = async (e) => {
     e.preventDefault();
-    if (!ingredientes || !tipoComida) return; // Validación extra
+    if (!ingredientes || !tipoComida) return;
     
     setLoading(true);
     setReceta(null);
+    setSaved(false); // Reseteamos el estado de guardado
 
-    // Si no hay macros calculados, usamos un estándar deportivo
     const objetivo = macros || { calorias: 600, proteinas: 40 };
 
     try {
@@ -23,7 +26,8 @@ export default function RecipeChef({ macros }) {
         body: JSON.stringify({
           ingredientes: ingredientes.split(',').map(i => i.trim()),
           tipoComida,
-          macrosObjetivo: objetivo
+          macrosObjetivo: objetivo,
+          userId: userId
         }),
       });
       
@@ -31,9 +35,7 @@ export default function RecipeChef({ macros }) {
       
       if (data.receta) {
         setReceta(data.receta);
-        // --- LIMPIEZA DE FORMULARIO ---
-        setIngredientes(''); // Vacia el texto
-        setTipoComida('');   // Vuelve a "Seleccionar..."
+        // Ya NO llamamos a onRecipeCreated() aquí, porque aún no la guardamos
       }
     } catch (error) {
       console.error("Error en la cocina:", error);
@@ -43,10 +45,38 @@ export default function RecipeChef({ macros }) {
     }
   };
 
+  // --- NUEVA FUNCIÓN: GUARDADO MANUAL ---
+  const guardarReceta = async () => {
+    if (!receta || !userId) return;
+    setSaving(true);
+
+    try {
+        const { error } = await supabase
+            .from('saved_recipes')
+            .insert({
+                user_id: userId,
+                recipe_data: receta
+            });
+
+        if (error) throw error;
+
+        setSaved(true); // Cambiamos el botón a "Guardado"
+        
+        // AHORA SÍ avisamos a la App para que actualice la lista de abajo
+        if (onRecipeCreated) onRecipeCreated();
+
+    } catch (error) {
+        console.error("Error guardando:", error);
+        alert("No se pudo guardar la receta.");
+    } finally {
+        setSaving(false);
+    }
+  };
+
   return (
     <div className="w-full max-w-4xl mt-12 animate-fade-in relative z-20">
       
-      {/* TÍTULO SIN MENCIÓN A IA */}
+      {/* TÍTULO */}
       <div className="mb-6 border-l-8 border-sportRed pl-4">
         <h2 className="text-4xl font-display font-bold text-sportDark italic uppercase leading-none">
           CHEF <span className="text-sportRed">PRO</span>
@@ -83,7 +113,6 @@ export default function RecipeChef({ macros }) {
                           tipoComida === '' ? 'text-gray-400 border-gray-200' : 'text-sportDark border-sportDark'
                         }`}
                     >
-                        {/* Opción por defecto deshabilitada pero visible al inicio */}
                         <option value="" disabled>SELECCIONAR...</option>
                         <option value="Desayuno">DESAYUNO</option>
                         <option value="Almuerzo">ALMUERZO</option>
@@ -94,7 +123,6 @@ export default function RecipeChef({ macros }) {
 
                 <button 
                     type="submit" 
-                    // Deshabilitamos si falta alguno de los dos campos
                     disabled={loading || !ingredientes || !tipoComida}
                     className="w-full py-3 bg-sportRed text-white font-display font-bold text-xl uppercase tracking-wider hover:bg-sportDark transition-colors shadow-sport disabled:opacity-50 disabled:shadow-none"
                 >
@@ -116,13 +144,35 @@ export default function RecipeChef({ macros }) {
             {loading && (
                 <div className="text-center animate-pulse">
                      <span className="text-6xl">🔥</span>
-                     {/* Texto cambiado */}
                      <p className="font-display uppercase font-bold text-sportRed mt-2">Optimizando macros...</p>
                 </div>
             )}
 
             {receta && (
-                <div className="absolute inset-0 bg-white p-6 overflow-y-auto text-left animate-fade-in">
+                <div className="absolute inset-0 bg-white p-6 overflow-y-auto text-left animate-fade-in flex flex-col">
+                    
+                    {/* BOTÓN DE GUARDAR (NUEVO) */}
+                    <div className="mb-4 flex justify-end">
+                        {!saved ? (
+                            <button 
+                                onClick={guardarReceta}
+                                disabled={saving}
+                                className="flex items-center gap-2 bg-sportDark text-white px-4 py-2 text-xs font-bold uppercase tracking-wider hover:bg-black transition-colors"
+                            >
+                                {saving ? 'Guardando...' : (
+                                    <>
+                                        <span>Guardar Receta</span>
+                                        <span className="text-sportRed">❤</span>
+                                    </>
+                                )}
+                            </button>
+                        ) : (
+                            <span className="text-green-600 text-xs font-bold uppercase tracking-wider border border-green-600 px-3 py-1">
+                                ✓ Guardado en Historial
+                            </span>
+                        )}
+                    </div>
+
                     <div className="flex justify-between items-start border-b-2 border-sportRed pb-4 mb-4">
                         <div>
                             <h3 className="text-3xl font-display font-bold text-sportDark uppercase italic">{receta.nombre_receta}</h3>
@@ -159,7 +209,7 @@ export default function RecipeChef({ macros }) {
                         </div>
                     </div>
 
-                    <div className="mt-6">
+                    <div className="mt-6 pb-10"> {/* Padding bottom extra para scroll */}
                         <h4 className="text-sm font-bold text-gray-400 uppercase mb-3">Preparación</h4>
                         <div className="space-y-3">
                             {receta.pasos.map((paso, i) => (
