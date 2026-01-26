@@ -1,46 +1,24 @@
-const { MercadoPagoConfig, Preference } = require("mercadopago");
-
-// 👇 CONFIGURA TU ACCESS TOKEN AQUÍ (o mejor, usa process.env.MP_ACCESS_TOKEN)
-// Este token lo sacas de: https://www.mercadopago.com.ar/developers/panel
-const client = new MercadoPagoConfig({
-  accessToken: "TEST-TU_ACCESS_TOKEN_AQUI",
-});
+// paymentController.js - MODO SIMULACIÓN (DEV)
 
 const createPreference = async (req, res) => {
   const { userId } = req.body;
 
+  console.log(`⚡ SIMULANDO PAGO PARA USUARIO: ${userId}`);
+
   try {
-    const preference = new Preference(client);
+    // En lugar de llamar a una API real, construimos la URL de "Éxito" directamente.
+    // Esto simula lo que haría MercadoPago/Ualá al terminar de cobrar.
 
-    const result = await preference.create({
-      body: {
-        items: [
-          {
-            id: "plan-pro-mensual",
-            title: "Suscripción PRO - NutriSport",
-            description: "Acceso total a recetas y entrenamientos ilimitados",
-            quantity: 1,
-            unit_price: 4990, // Precio en Pesos Argentinos (ARS)
-            currency_id: "ARS",
-          },
-        ],
-        // 👇 IMPORTANTE: MercadoPago necesita saber a dónde volver
-        back_urls: {
-          success: "http://localhost:5173/perfil", // Cambia al puerto de tu frontend
-          failure: "http://localhost:5173/",
-          pending: "http://localhost:5173/",
-        },
-        auto_return: "approved",
-        external_reference: userId, // Guardamos el ID del usuario para saber quién pagó
-        statement_descriptor: "NUTRISPORT PRO",
-      },
-    });
+    // 👇 Esta URL hace que tu Frontend crea que el pago fue "approved"
+    const successUrl = `http://localhost:5173/perfil?collection_status=approved&external_reference=${userId}&payment_type=simulated`;
 
-    // Devolvemos el init_point (el link de pago)
-    res.json({ init_point: result.init_point });
+    // Retardamos 1 segundo para que se sienta "real" el loading del botón
+    setTimeout(() => {
+      res.json({ init_point: successUrl });
+    }, 1000);
   } catch (error) {
-    console.error("Error Mercado Pago:", error);
-    res.status(500).json({ error: "Error al crear preferencia de pago" });
+    console.error("Error en simulación:", error);
+    res.status(500).json({ error: "Error al simular cobro" });
   }
 };
 

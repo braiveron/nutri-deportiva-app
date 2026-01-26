@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
 // He añadido userId a los props. Asegúrate de pasárselo desde el padre (App.jsx)
-export default function Navbar({ onLogout, userRole, loadingRole, userName, userId, subscriptionEnd, autoRenew, onCancelSub }) {
+export default function Navbar({ onLogout, userRole, loadingRole, userName, userId, subscriptionEnd, autoRenew, onCancelSub, onReactivate }) {
   const location = useLocation();
   const [showSubModal, setShowSubModal] = useState(false);
   const [loadingPay, setLoadingPay] = useState(false);
@@ -129,11 +129,14 @@ export default function Navbar({ onLogout, userRole, loadingRole, userName, user
                     </button>
                 ) : (
                     <button 
-                        onClick={handleMercadoPago} // 👈 USAMOS LA NUEVA LÓGICA AQUÍ TAMBIÉN
-                        className="w-full bg-white text-sportDark hover:bg-gray-200 py-3 text-xs font-bold uppercase tracking-widest transition-colors shadow-lg"
-                    >
-                        ↻ Reactivar Membresía
-                    </button>
+    onClick={() => {
+        onReactivate();         // 1. Dispara la lógica global (Loading -> Éxito)
+        setShowSubModal(false);  // 2. ¡Cierra este modal inmediatamente!
+    }}
+    className="w-full bg-white text-sportDark hover:bg-gray-200 py-3 text-xs font-bold uppercase tracking-widest transition-colors shadow-lg"
+>
+    ↻ Reactivar Membresía
+</button>
                 )}
             </div>
         </div>

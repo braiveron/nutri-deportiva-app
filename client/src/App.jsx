@@ -2,8 +2,9 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { useAppLogic } from "./hooks/useAppLogic"; 
 
 // Componentes
-import Navbar from "./components/Navbar"; 
+import Navbar from "./components/NavBar";
 import Auth from "./components/Auth";
+import StatusModal from "./components/StatusModal"; 
 
 // Páginas
 import PerfilPage from "./pages/PerfilPage";
@@ -20,9 +21,14 @@ function App() {
     subEndDate, 
     loadingRole, 
     checkingBiometrics, 
+    // Variables del Modal
+    paymentModal,       
+    closePaymentModal,
+    // Funciones
     handleCalculationSuccess, 
     handleSimulateUpgrade, 
-    handleCancelSubscription, 
+    handleCancelSubscription,
+    handleReactivateSubscription, // 👈 1. AQUÍ LA TRAEMOS
     handleLogout,
     updateWorkoutPlan 
   } = useAppLogic();
@@ -45,10 +51,9 @@ function App() {
   const userName = session.user.user_metadata.full_name || "Usuario";
 
   return (
-    // 👇 1. CONTENEDOR PRINCIPAL CON FONDO "TECH"
     <div className="min-h-screen relative bg-gray-50 text-gray-800 font-sans overflow-hidden selection:bg-sportRed selection:text-white">
       
-      {/* 2. PATRÓN DE PUNTOS (GRID) */}
+      {/* BACKGROUND */}
       <div 
         className="absolute inset-0 z-0 pointer-events-none opacity-40" 
         style={{
@@ -56,13 +61,22 @@ function App() {
              backgroundSize: '24px 24px'
         }}
       ></div>
-
-      {/* 3. ORBE DE ENERGÍA (Mancha roja suave detrás) */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-sportRed/10 rounded-full blur-3xl -z-10 animate-pulse"></div>
 
-      {/* 4. CONTENIDO (Navbar y Páginas) con z-10 para estar encima del fondo */}
+      {/* MODAL GLOBAL */}
+      {paymentModal.show && (
+        <StatusModal 
+            type={paymentModal.type} 
+            title={paymentModal.title} 
+            message={paymentModal.message} 
+            onClose={closePaymentModal} 
+            onConfirm={paymentModal.onConfirm}
+        />
+      )}
+
       <div className="relative z-10">
         
+        {/* 👇 2. AQUÍ SE LA PASAMOS AL NAVBAR */}
         <Navbar 
           onLogout={handleLogout} 
           userRole={userRole} 
@@ -73,6 +87,7 @@ function App() {
           autoRenew={autoRenew}
           onCancelSub={handleCancelSubscription}
           onSubscribe={handleSimulateUpgrade} 
+          onReactivate={handleReactivateSubscription} // <--- NUEVA PROP
         />
 
         <div className="pb-10">
@@ -92,6 +107,7 @@ function App() {
                     macros={userMacros} 
                     userId={session.user.id} 
                     userRole={userRole}
+                    onUnlock={handleSimulateUpgrade}
                 />
             } />
 
@@ -102,6 +118,7 @@ function App() {
                     userRole={userRole}
                     userGoal={initialCalcData?.goal || 'mantener'}
                     onPlanCreated={updateWorkoutPlan}
+                    onUnlock={handleSimulateUpgrade}
                 />
             } />
           </Routes>

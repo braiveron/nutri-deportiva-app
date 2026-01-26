@@ -3,34 +3,12 @@ import RecipeChef from "../components/RecipeChef";
 import RecipeHistory from "../components/RecipeHistory";
 import PremiumLock from "../components/PremiumLock";
 
-export default function CocinaPage({ macros, userId, userRole }) {
+// 👇 Recibimos onUnlock (que viene de App.jsx -> useAppLogic)
+export default function CocinaPage({ macros, userId, userRole, onUnlock }) {
   const [refreshHistory, setRefreshHistory] = useState(0);
-  const [loadingPay, setLoadingPay] = useState(false);
 
-  // 👇 LÓGICA MERCADO PAGO
-  const handleMercadoPago = async () => {
-    if (loadingPay) return;
-    setLoadingPay(true);
-    try {
-      const response = await fetch('http://localhost:5000/api/crear-pago', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: userId }),
-      });
-      const data = await response.json();
-      
-      if (data.init_point) {
-        window.location.href = data.init_point; // 🚀 Redirige a Mercado Pago
-      } else {
-        alert("Error al iniciar el pago.");
-      }
-    } catch (error) {
-      console.error(error);
-      alert("No se pudo conectar con el servidor.");
-    } finally {
-      setLoadingPay(false);
-    }
-  };
+  // 🛑 Eliminamos toda la lógica manual de handleMercadoPago y loadingPay
+  // Ahora confiamos en la función onUnlock que hace todo el trabajo sucio.
 
   if (!macros) {
     return (
@@ -58,8 +36,12 @@ export default function CocinaPage({ macros, userId, userRole }) {
              <h2 className="text-3xl font-display font-bold text-sportDark mb-8 italic">
                  CHEF PERSONAL <span className="text-sportRed">PRO</span>
              </h2>
-             <PremiumLock onUnlock={handleMercadoPago} />
-             {loadingPay && <p className="mt-4 text-xs font-bold text-gray-400 animate-pulse">Cargando Mercado Pago...</p>}
+             
+             {/* 👇 Usamos onUnlock directamente */}
+             <PremiumLock onUnlock={onUnlock} />
+             
+             {/* Nota: El loading ahora lo maneja el modal global de App.jsx si fuera necesario, 
+                 o simplemente redirige rápido. Ya no necesitamos loading local aquí. */}
          </div>
        )}
     </div>

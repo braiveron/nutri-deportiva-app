@@ -73,7 +73,8 @@ export default function Calculator({ onCalculationSuccess, initialData, userId }
             if(onCalculationSuccess) onCalculationSuccess(nuevoPlan);
         }
     }
-  }, [formData.objetivo, todosLosPlanes]); 
+  },     // eslint-disable-next-line react-hooks/exhaustive-deps
+[formData.objetivo, todosLosPlanes]); 
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
