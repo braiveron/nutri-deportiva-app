@@ -1,9 +1,33 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
-export default function Navbar({ onLogout, userRole, loadingRole, userName, subscriptionEnd, autoRenew, onCancelSub, onSubscribe }) {
+// He añadido userId a los props. Asegúrate de pasárselo desde el padre (App.jsx)
+export default function Navbar({ onLogout, userRole, loadingRole, userName, userId, subscriptionEnd, autoRenew, onCancelSub }) {
   const location = useLocation();
   const [showSubModal, setShowSubModal] = useState(false);
+  const [loadingPay, setLoadingPay] = useState(false);
+
+  // 👇 LÓGICA MERCADO PAGO EN EL NAVBAR
+  const handleMercadoPago = async () => {
+    if (loadingPay) return;
+    setLoadingPay(true);
+    try {
+      const response = await fetch('http://localhost:5000/api/crear-pago', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: userId }), // IMPORTANTE: Necesitamos el ID real
+      });
+      const data = await response.json();
+      if (data.init_point) window.location.href = data.init_point;
+      else alert("Error al iniciar el pago.");
+    } catch (error) {
+      console.error(error);
+      alert("No se pudo conectar con el servidor.");
+    } finally {
+      setLoadingPay(false);
+      setShowSubModal(false);
+    }
+  };
 
   const isActive = (path) => location.pathname === path 
     ? "text-sportRed border-b-2 border-sportRed" 
@@ -24,7 +48,7 @@ export default function Navbar({ onLogout, userRole, loadingRole, userName, subs
               NUTRI<span className="text-sportRed">SPORT</span>
           </div>
           
-          {/* BADGE DE SUSCRIPCIÓN */}
+          {/* BADGE SUSCRIPCIÓN */}
           <div className="hidden md:block">
               {loadingRole ? (
                   <span className="text-[10px] text-gray-500 animate-pulse">Cargando...</span>
@@ -42,10 +66,11 @@ export default function Navbar({ onLogout, userRole, loadingRole, userName, subs
                   </button>
               ) : (
                   <button 
-                    onClick={onSubscribe}
-                    className="text-[10px] bg-sportRed hover:bg-red-700 text-white px-3 py-1 font-bold uppercase tracking-widest transition-all rounded-sm shadow-[0_0_10px_rgba(220,38,38,0.5)] animate-pulse"
+                    onClick={handleMercadoPago} // 👈 USAMOS LA NUEVA LÓGICA
+                    disabled={loadingPay}
+                    className="text-[10px] bg-sportRed hover:bg-red-700 text-white px-3 py-1 font-bold uppercase tracking-widest transition-all rounded-sm shadow-[0_0_10px_rgba(220,38,38,0.5)] animate-pulse disabled:opacity-50"
                   >
-                    Mejorar Plan
+                    {loadingPay ? 'Procesando...' : 'Mejorar Plan'}
                   </button>
               )}
           </div>
@@ -92,11 +117,9 @@ export default function Navbar({ onLogout, userRole, loadingRole, userName, subs
                     </div>
                 </div>
 
-                {/* 👇 AQUÍ ESTÁ LA LÓGICA DE BOTONES INTELIGENTE */}
                 {autoRenew ? (
                     <button 
                         onClick={() => {
-                            // Primero cerramos modal, luego cancelamos
                             setShowSubModal(false);
                             onCancelSub();
                         }}
@@ -106,21 +129,11 @@ export default function Navbar({ onLogout, userRole, loadingRole, userName, subs
                     </button>
                 ) : (
                     <button 
-                        onClick={() => {
-                            setShowSubModal(false);
-                            onSubscribe(); // Usamos la misma función de suscripción para reactivar
-                        }}
+                        onClick={handleMercadoPago} // 👈 USAMOS LA NUEVA LÓGICA AQUÍ TAMBIÉN
                         className="w-full bg-white text-sportDark hover:bg-gray-200 py-3 text-xs font-bold uppercase tracking-widest transition-colors shadow-lg"
                     >
                         ↻ Reactivar Membresía
                     </button>
-                )}
-                
-                {/* Mensaje de ayuda sutil */}
-                {!autoRenew && (
-                    <p className="text-[10px] text-gray-500 text-center mt-3">
-                        Reactivar mantendrá tus beneficios sin interrupciones.
-                    </p>
                 )}
             </div>
         </div>

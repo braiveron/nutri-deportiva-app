@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react'; 
 import { useNavigate } from 'react-router-dom'; 
 
 const DESCRIPCIONES = {
@@ -7,6 +7,16 @@ const DESCRIPCIONES = {
   moderado: "3-5 días (Gym, Trote)",
   intenso: "6-7 días (CrossFit, Competencia)",
   muy_intenso: "Doble Turno / Atleta Élite"
+};
+
+const sonDatosDiferentes = (data1, data2) => {
+    if (!data1 || !data2) return true;
+    return (
+        data1.peso != data2.peso ||         
+        data1.altura != data2.altura ||
+        data1.edad != data2.edad ||
+        data1.genero !== data2.genero 
+    );
 };
 
 export default function Calculator({ onCalculationSuccess, initialData, userId }) {
@@ -20,18 +30,26 @@ export default function Calculator({ onCalculationSuccess, initialData, userId }
   const [resultadoLocal, setResultadoLocal] = useState(null);
   const [todosLosPlanes, setTodosLosPlanes] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
+  const [lastSavedData, setLastSavedData] = useState(null);
+  const [menuAbierto, setMenuAbierto] = useState(false);
 
-  // EFECTO 1: Cargar datos iniciales
+  const ignoreClickRef = useRef(false);
+
+  // EFECTO 1: Carga inicial
   useEffect(() => {
-    if (initialData) {
-      setFormData({
+    if (initialData && !dataLoaded) {
+      const incomingData = {
         peso: initialData.weight_kg || '',
         altura: initialData.height_cm || '',
         edad: initialData.age || '', 
         genero: initialData.gender || 'masculino',
         nivel_actividad: initialData.activity_level || 'moderado',
         objetivo: initialData.goal || 'mantener' 
-      });
+      };
+
+      setFormData(incomingData);
+      setLastSavedData(incomingData);
 
       if (initialData.target_macros) {
         if (initialData.target_macros.todos_los_planes) {
@@ -42,10 +60,11 @@ export default function Calculator({ onCalculationSuccess, initialData, userId }
             setResultadoLocal(initialData.target_macros);
         }
       }
+      setDataLoaded(true);
     }
-  }, [initialData]);
+  }, [initialData, dataLoaded]);
 
-  // EFECTO 2: Cambio Dinámico de Objetivo (Filtrado Local)
+  // EFECTO 2: Cambio Dinámico de Objetivo
   useEffect(() => {
     if (todosLosPlanes && formData.objetivo) {
         const nuevoPlan = todosLosPlanes[formData.objetivo];
@@ -54,16 +73,22 @@ export default function Calculator({ onCalculationSuccess, initialData, userId }
             if(onCalculationSuccess) onCalculationSuccess(nuevoPlan);
         }
     }
-  }, 
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-  [formData.objetivo, todosLosPlanes]);
+  }, [formData.objetivo, todosLosPlanes]); 
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  // ⚡ LÓGICA CENTRAL DE CÁLCULO (Extraída para reutilizar)
-  const realizarCalculo = async (datosParaCalcular) => {
+  // 👇 FUNCIÓN ACTUALIZADA Y CORREGIDA
+  const realizarCalculo = async (datosParaCalcular, esManual = false) => {
+    
+    // 1. VALIDACIÓN
+    if (!datosParaCalcular.peso || !datosParaCalcular.altura || !datosParaCalcular.edad) {
+        console.warn("Intento de cálculo incompleto (silenciado)");
+        return; 
+    }
+
     setLoading(true);
     try {
+      // Intentamos conectar al servidor
       const response = await fetch('http://localhost:5000/api/calcular-plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -78,42 +103,94 @@ export default function Calculator({ onCalculationSuccess, initialData, userId }
         }),
       });
 
-      if (!response.ok) throw new Error(`Error: ${response.status}`);
+      if (!response.ok) {
+        throw new Error(`Error del Servidor: ${response.status}`);
+      }
 
       const data = await response.json();
       
+      // Verificamos que la respuesta tenga sentido
+      if (!data || !data.plan) {
+         throw new Error("Respuesta vacía del servidor");
+      }
+
+      setLastSavedData(datosParaCalcular);
+
       if (data.plan.todos_los_planes) {
+          // CASO A: Respuesta con múltiples planes
           setTodosLosPlanes(data.plan.todos_los_planes);
           const planActual = data.plan.todos_los_planes[datosParaCalcular.objetivo];
           setResultadoLocal(planActual);
+          
+          // Notificar al padre (Gráfico)
           if(onCalculationSuccess) onCalculationSuccess(planActual);
       } else {
+          // CASO B: Respuesta con un único plan
           setResultadoLocal(data.plan);
+          
+          // 👇 ESTA ES LA LÍNEA QUE FALTABA PARA QUE EL GRÁFICO NO DESAPAREZCA
+          if(onCalculationSuccess) onCalculationSuccess(data.plan);
       }
 
     } catch (error) {
-      console.error(error);
-      alert("Faltan datos para calcular.");
+      console.error("Error en cálculo:", error);
+      // Solo mostramos alerta si fue un click manual
+      if (esManual) {
+         alert("Error al calcular: Verifica que el servidor (Backend) esté funcionando.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Manejador del botón manual
   const handleSubmit = (e) => {
     e.preventDefault();
-    realizarCalculo(formData);
+    if (!formData.peso || !formData.altura || !formData.edad) {
+        alert("Por favor completa Peso, Altura y Edad antes de calcular.");
+        return;
+    }
+    // Pasamos true para indicar que fue un click manual y queremos ver alertas de error
+    realizarCalculo(formData, true);
   };
 
-  // 👇 NUEVO: Manejador Automático para Actividad
+  // --- LÓGICA VISUAL MENÚS ---
+  const handleSelectFocus = () => {
+    setMenuAbierto(true);
+    ignoreClickRef.current = true; 
+  };
+
+  const handleSelectBlur = () => {
+    setMenuAbierto(false);
+    ignoreClickRef.current = false;
+  };
+
+  const handleSelectClick = (e) => {
+    if (ignoreClickRef.current) {
+        ignoreClickRef.current = false;
+        return;
+    }
+    e.target.blur();
+    setMenuAbierto(false);
+  };
+
+  const handleObjetivoChange = (e) => {
+    e.target.blur();
+    handleChange(e);       
+  };
+
+  const handleGeneroChange = (e) => {
+    const nuevoGenero = e.target.value;
+    e.target.blur();
+    setFormData(prev => ({ ...prev, genero: nuevoGenero }));
+    if (formData.peso && formData.altura && formData.edad) {
+        realizarCalculo({ ...formData, genero: nuevoGenero });
+    }
+  };
+
   const handleActivityChange = (e) => {
     const nuevaActividad = e.target.value;
-    
-    // 1. Actualizamos el estado visual
+    e.target.blur();
     setFormData(prev => ({ ...prev, nivel_actividad: nuevaActividad }));
-    
-    // 2. Disparamos el cálculo AUTOMÁTICAMENTE con el nuevo valor
-    // (Usamos un objeto temporal porque el estado 'formData' aún no se ha actualizado)
     if (formData.peso && formData.altura && formData.edad) {
         realizarCalculo({ ...formData, nivel_actividad: nuevaActividad });
     }
@@ -122,6 +199,9 @@ export default function Calculator({ onCalculationSuccess, initialData, userId }
   const irALaCocina = () => {
     navigate('/cocina'); 
   };
+
+  const datosDesactualizados = sonDatosDiferentes(formData, lastSavedData);
+  const debeEstarBorrosa = loading || datosDesactualizados || menuAbierto;
 
   return (
     <div className="w-full max-w-5xl flex flex-col md:flex-row justify-center items-start gap-8 animate-fade-in relative z-20">
@@ -134,8 +214,15 @@ export default function Calculator({ onCalculationSuccess, initialData, userId }
             
             <div className="mb-4">
                 <label className="text-xs font-bold text-sportRed uppercase block mb-1">¿Cuál es tu objetivo?</label>
-                <select name="objetivo" value={formData.objetivo} onChange={handleChange} 
-                    className="w-full border-2 border-sportRed/20 bg-red-50 p-2 font-bold text-sportDark focus:border-sportRed focus:outline-none transition-all hover:bg-red-100 cursor-pointer">
+                <select 
+                    name="objetivo" 
+                    value={formData.objetivo} 
+                    onChange={handleObjetivoChange}
+                    onClick={handleSelectClick}
+                    onFocus={handleSelectFocus}
+                    onBlur={handleSelectBlur}
+                    className="w-full border-2 border-sportRed/20 bg-red-50 p-2 font-bold text-sportDark focus:border-sportRed focus:outline-none transition-all hover:bg-red-100 cursor-pointer"
+                >
                   <option value="perder">🔥 PERDER GRASA (Déficit)</option>
                   <option value="mantener">⚖️ MANTENER PESO</option>
                   <option value="ganar">💪 GANAR MÚSCULO (Volumen)</option>
@@ -163,20 +250,30 @@ export default function Calculator({ onCalculationSuccess, initialData, userId }
                 </div>
                 <div>
                     <label className="text-xs font-bold text-gray-500 uppercase">Género</label>
-                    <select name="genero" value={formData.genero} onChange={handleChange} className="w-full bg-gray-50 border border-gray-300 font-bold text-base px-3 py-2 focus:outline-none focus:border-sportRed cursor-pointer h-[46px]">
-                    <option value="masculino">HOMBRE</option>
-                    <option value="femenino">MUJER</option>
+                    <select 
+                        name="genero" 
+                        value={formData.genero} 
+                        onChange={handleGeneroChange} 
+                        onClick={handleSelectClick}
+                        onFocus={handleSelectFocus}
+                        onBlur={handleSelectBlur}
+                        className="w-full bg-gray-50 border border-gray-300 font-bold text-base px-3 py-2 focus:outline-none focus:border-sportRed cursor-pointer h-[46px]"
+                    >
+                        <option value="masculino">HOMBRE</option>
+                        <option value="femenino">MUJER</option>
                     </select>
                 </div>
             </div>
 
             <div>
                 <label className="text-xs font-bold text-gray-500 uppercase">Nivel de Actividad</label>
-                {/* 👇 AQUÍ USAMOS EL NUEVO MANEJADOR AUTOMÁTICO */}
                 <select 
                     name="nivel_actividad" 
                     value={formData.nivel_actividad} 
                     onChange={handleActivityChange} 
+                    onClick={handleSelectClick}
+                    onFocus={handleSelectFocus}
+                    onBlur={handleSelectBlur}
                     className="w-full bg-gray-50 border border-gray-300 font-bold text-base px-3 py-2 focus:outline-none focus:border-sportRed cursor-pointer mb-1"
                 >
                   <option value="sedentario">SEDENTARIO</option>
@@ -199,8 +296,17 @@ export default function Calculator({ onCalculationSuccess, initialData, userId }
 
       {/* TARJETA RESULTADOS */}
       {resultadoLocal && (
-        <div className="bg-sportDark text-white p-6 w-full max-w-sm border-l-4 border-sportRed flex flex-col justify-center animate-fade-in shadow-2xl relative">
-           
+        <div 
+            className={`bg-sportDark text-white p-6 w-full max-w-sm border-l-4 border-sportRed flex flex-col justify-center animate-fade-in shadow-2xl relative transition-all duration-300 
+            ${debeEstarBorrosa ? 'blur-sm opacity-60 pointer-events-none' : 'blur-0 opacity-100'}
+            `}
+        >
+           {loading && (
+             <div className="absolute inset-0 z-50 flex items-center justify-center">
+                 <span className="text-white font-bold uppercase tracking-widest text-sm animate-pulse">Actualizando...</span>
+             </div>
+           )}
+
            <div className="text-center mb-6">
                <h3 className="text-gray-400 font-bold uppercase tracking-widest text-xs mb-2">Objetivo Diario</h3>
                <div className="flex items-center justify-center gap-1">
@@ -213,9 +319,9 @@ export default function Calculator({ onCalculationSuccess, initialData, userId }
                  formData.objetivo === 'ganar' ? 'bg-green-500/20 text-green-400' :
                  'bg-blue-500/20 text-blue-400'
                }`}>
-                    {formData.objetivo === 'perder' && '📉 Déficit Calórico'}
-                    {formData.objetivo === 'mantener' && '⚖️ Mantenimiento'}
-                    {formData.objetivo === 'ganar' && '📈 Superávit'}
+                   {formData.objetivo === 'perder' && '📉 Déficit Calórico'}
+                   {formData.objetivo === 'mantener' && '⚖️ Mantenimiento'}
+                   {formData.objetivo === 'ganar' && '📈 Superávit'}
                </div>
 
                <div className="mt-2 text-[10px] text-gray-500 font-bold uppercase tracking-widest border-t border-gray-800 pt-2">
