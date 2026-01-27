@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabase";
+import { api } from "../services/api"; // 👈 IMPORTAMOS LA API PARA EL DIARIO
 
 export default function RecipeHistory({ userId }) {
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
+  
+  // Estado para el buscador
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     if (userId) fetchRecipes();
@@ -28,11 +32,10 @@ export default function RecipeHistory({ userId }) {
     }
   };
 
-  // --- NUEVA FUNCIÓN: BORRAR ---
   const handleDelete = async (e, id) => {
-    e.stopPropagation(); // Para que no se abra la receta al hacer click en borrar
+    e.stopPropagation(); 
     
-    const confirm = window.confirm("¿Estás seguro de que quieres borrar esta receta del historial?");
+    const confirm = window.confirm("¿Borrar esta receta permanentemente?");
     if (!confirm) return;
 
     try {
@@ -42,8 +45,6 @@ export default function RecipeHistory({ userId }) {
         .eq('id', id);
 
       if (error) throw error;
-
-      // Actualizamos la lista visualmente sin recargar
       setRecipes(recipes.filter(r => r.id !== id));
 
     } catch (error) {
@@ -51,38 +52,104 @@ export default function RecipeHistory({ userId }) {
     }
   };
 
+  // 👇 NUEVA FUNCIÓN: ENVIAR AL DIARIO
+  const handleAddToTracker = async (e, item) => {
+      e.stopPropagation(); // Evita que se abra/cierre el acordeón
+
+      const confirm = window.confirm(`¿Registrar "${item.recipe_data.nombre_receta}" en tu diario de hoy?`);
+      if (!confirm) return;
+
+      const macros = item.recipe_data.macros;
+
+      const logData = {
+          userId,
+          meal_name: item.recipe_data.nombre_receta,
+          calories: macros.calorias || 0,
+          protein: macros.proteinas || 0,
+          carbs: macros.carbohidratos || 0,
+          fats: macros.grasas || 0
+      };
+
+      try {
+          const res = await api.addDailyLog(logData);
+          if (res.success) {
+              alert("✅ ¡Agregado! Tus macros se han actualizado.");
+          } else {
+              alert("Error al agregar: " + res.error);
+          }
+      } catch (error) {
+          console.error(error);
+          alert("Error de conexión");
+      }
+  };
+
   const toggleRecipe = (id) => {
     setExpandedId(expandedId === id ? null : id);
   };
+
+  // Lógica de Filtrado
+  const filteredRecipes = recipes.filter((item) => {
+      if (!searchTerm) return true;
+      const nombre = item.recipe_data?.nombre_receta?.toLowerCase() || "";
+      return nombre.includes(searchTerm.toLowerCase());
+  });
 
   if (loading) return <div className="text-center text-gray-400 mt-10 animate-pulse">Cargando libro de cocina...</div>;
 
   return (
     <div className="w-full max-w-4xl mt-16 animate-fade-in pb-20">
       
-      <div className="flex items-center gap-4 mb-6">
+      {/* TÍTULO */}
+      <div className="flex items-center gap-4 mb-4">
         <div className="h-px bg-gray-300 flex-1"></div>
         <h3 className="text-2xl font-display font-bold text-gray-400 uppercase tracking-widest">
-            Historial de Comidas
+            Recetas Guardadas
         </h3>
         <div className="h-px bg-gray-300 flex-1"></div>
       </div>
 
-      {recipes.length === 0 ? (
+      {/* INPUT BUSCADOR */}
+      {recipes.length > 0 && (
+          <div className="mb-8 flex justify-center">
+              <div className="relative w-full max-w-md">
+                  <input 
+                      type="text" 
+                      placeholder="Buscar en tus recetas..." 
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 rounded-full border border-gray-200 bg-white focus:outline-none focus:border-sportRed focus:ring-1 focus:ring-sportRed transition-all text-sm shadow-sm"
+                  />
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                  {searchTerm && (
+                      <button 
+                        onClick={() => setSearchTerm("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-sportRed"
+                      >
+                        ✕
+                      </button>
+                  )}
+              </div>
+          </div>
+      )}
+
+      {/* LISTA */}
+      {filteredRecipes.length === 0 ? (
         <div className="text-center py-10 border-2 border-dashed border-gray-200 rounded bg-gray-50">
             <span className="text-4xl block mb-2">📂</span>
-            <p className="text-gray-400 font-bold uppercase text-sm">No hay recetas guardadas aún.</p>
+            <p className="text-gray-400 font-bold uppercase text-sm">
+                {searchTerm ? `No se encontró "${searchTerm}"` : "No hay recetas guardadas aún."}
+            </p>
         </div>
       ) : (
         <div className="grid gap-4">
-            {recipes.map((item) => {
+            {filteredRecipes.map((item) => {
             const receta = item.recipe_data; 
             const isOpen = expandedId === item.id;
 
             return (
                 <div key={item.id} className="bg-white border-l-4 border-sportDark shadow-md overflow-hidden transition-all duration-300 group">
                 
-                {/* CABECERA (Clickable) */}
+                {/* CABECERA */}
                 <div 
                     onClick={() => toggleRecipe(item.id)}
                     className="w-full flex justify-between items-center p-4 hover:bg-gray-50 cursor-pointer"
@@ -94,14 +161,28 @@ export default function RecipeHistory({ userId }) {
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                        {/* BOTÓN DE BORRAR (Nuevo) */}
+                    <div className="flex items-center gap-3">
+                        
+                        {/* 👇 BOTÓN NUEVO: AGREGAR AL DIARIO */}
+                        <button 
+                            onClick={(e) => handleAddToTracker(e, item)}
+                            className="p-2 text-gray-300 hover:text-green-600 hover:bg-green-50 rounded-full transition-all"
+                            title="Registrar en Diario de Hoy"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                            </svg>
+                        </button>
+
+                        {/* BOTÓN BORRAR */}
                         <button 
                             onClick={(e) => handleDelete(e, item.id)}
-                            className="p-2 text-gray-300 hover:text-red-600 hover:scale-110 transition-all"
+                            className="p-2 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded-full transition-all"
                             title="Borrar receta"
                         >
-                            🗑
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                            </svg>
                         </button>
 
                         <span className={`text-sportRed text-2xl transform transition-transform ${isOpen ? 'rotate-180' : ''}`}>

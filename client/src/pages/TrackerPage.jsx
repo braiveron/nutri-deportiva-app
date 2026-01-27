@@ -3,11 +3,9 @@ import PremiumLock from "../components/PremiumLock";
 
 export default function TrackerPage({ macros, userId, userRole, onUnlock }) {
 
-  // 1. NORMALIZACIÓN DE DATOS (Lógica intacta)
+  // 1. NORMALIZACIÓN DE DATOS
   const detectarMacrosReales = (data) => {
       if (!data) return null;
-
-      // Caso 1: Estructura Español
       if (data.calorias_diarias || (data.macros && data.macros.proteinas)) {
           const prot = data.macros?.proteinas || data.protein || 0;
           const carb = data.macros?.carbohidratos || data.carbs || 0;
@@ -15,13 +13,9 @@ export default function TrackerPage({ macros, userId, userRole, onUnlock }) {
           const cal = data.calorias_diarias || data.calories || 0;
           return { calories: Number(cal), protein: Number(prot), carbs: Number(carb), fats: Number(gras) };
       }
-
-      // Caso 2: Estructura Inglés antigua
       if (data.calories && data.protein) {
           return { calories: Number(data.calories), protein: Number(data.protein), carbs: Number(data.carbs), fats: Number(data.fats) };
       }
-
-      // Caso 3: Anidados
       if (data.target_macros) {
           if (data.target_macros.todos_los_planes) {
                const objetivo = data.goal || 'mantener';
@@ -35,10 +29,8 @@ export default function TrackerPage({ macros, userId, userRole, onUnlock }) {
 
   const finalMacros = detectarMacrosReales(macros);
 
+  // 2. RENDERIZADO
 
-  // 2. RENDERIZADO PRINCIPAL (Estilo idéntico a EntrenoPage)
-
-  // CASO A: Usuario NO PRO (Candado limpio)
   if (userRole !== 'pro') {
     return (
         <div className="flex flex-col items-center pt-10 animate-fade-in px-4 w-full">
@@ -50,7 +42,6 @@ export default function TrackerPage({ macros, userId, userRole, onUnlock }) {
     );
   }
 
-  // CASO B: Usuario PRO pero SIN DATOS (Aviso Error)
   if (!finalMacros) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] animate-fade-in px-4 text-center">
@@ -61,11 +52,9 @@ export default function TrackerPage({ macros, userId, userRole, onUnlock }) {
     );
   }
 
-  // CASO C: Usuario PRO con DATOS (App Funcionando)
   return (
-    <div className="flex flex-col items-center pt-10 pb-20 px-4 animate-fade-in w-full">
-        {/* En EntrenoPage el componente TrainingCoach ya trae su título o layout interno.
-            Aquí renderizamos MacroTracker directo dentro del contenedor full-width */}
+    // 👇 CAMBIO AQUÍ: 'max-w-7xl' para que entren bien las dos columnas
+    <div className="flex flex-col items-center pt-10 pb-20 px-4 animate-fade-in w-full max-w-7xl mx-auto">
         <MacroTracker userId={userId} userMacros={finalMacros} />
     </div>
   );

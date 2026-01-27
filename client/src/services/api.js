@@ -1,8 +1,10 @@
+// 👇 1. IMPORTANTE: Importamos el cliente de Supabase aquí
+import { supabase } from "../supabase";
+
 // ⚠️ Ajusta el puerto si tu servidor no corre en el 5000
 const API_URL = "http://localhost:5000/api";
 
 // 👇 Función auxiliar para obtener la fecha local "YYYY-MM-DD"
-// Esto evita que el día se reinicie antes de tiempo (por diferencia horaria con el servidor)
 const getLocalDate = () => {
   const date = new Date();
   const offset = date.getTimezoneOffset();
@@ -80,11 +82,10 @@ export const api = {
     return await response.json();
   },
 
-  // --- TRACKER DIARIO (CORREGIDO PARA USAR FECHA LOCAL) ---
+  // --- TRACKER DIARIO ---
 
   getDailyLogs: async (userId) => {
-    const dateStr = getLocalDate(); // Calculamos fecha hoy local
-    // Enviamos la fecha como parámetro ?date=2026-01-27
+    const dateStr = getLocalDate();
     const response = await fetch(
       `${API_URL}/tracker/${userId}?date=${dateStr}`,
     );
@@ -92,7 +93,6 @@ export const api = {
   },
 
   addDailyLog: async (logData) => {
-    // Inyectamos la fecha local si no viene en el objeto logData
     const payload = {
       ...logData,
       date: logData.date || getLocalDate(),
@@ -120,5 +120,39 @@ export const api = {
       method: "DELETE",
     });
     return await response.json();
+  },
+
+  deleteUserAccount: async (userId) => {
+    const response = await fetch(`${API_URL}/user/delete/${userId}`, {
+      method: "DELETE",
+    });
+    return await response.json();
+  },
+
+  // --- GESTIÓN DE CUENTA (Supabase Directo) ---
+
+  // 1. Actualizar Datos Personales (Tabla profiles)
+  updateUserProfile: async (userId, { nombre, apellido }) => {
+    const updates = {
+      nombre, // Asegúrate que tu tabla 'profiles' tenga esta columna
+      apellido, // Asegúrate que tu tabla 'profiles' tenga esta columna
+      updated_at: new Date(),
+    };
+
+    // Ahora 'supabase' ya está definido gracias al import del principio
+    const { error } = await supabase
+      .from("profiles")
+      .update(updates)
+      .eq("id", userId);
+
+    return { success: !error, error };
+  },
+
+  // 2. Cambiar Contraseña (Supabase Auth)
+  updateUserPassword: async (newPassword) => {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+    return { success: !error, error };
   },
 };

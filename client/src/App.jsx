@@ -1,3 +1,4 @@
+import { useState } from "react"; // 👈 Importamos useState
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAppLogic } from "./hooks/useAppLogic"; 
 
@@ -5,6 +6,7 @@ import { useAppLogic } from "./hooks/useAppLogic";
 import Navbar from "./components/NavBar";
 import Auth from "./components/Auth";
 import StatusModal from "./components/StatusModal"; 
+import AccountSettingsModal from "./components/AccountSettingsModal"; // 👈 Importamos el Modal
 
 // Páginas
 import PerfilPage from "./pages/PerfilPage";
@@ -19,7 +21,7 @@ function App() {
     userRole, 
     initialCalcData, 
     autoRenew, 
-    subEndDate, 
+    // subEndDate, // Ya no lo usamos en UI directa
     loadingRole, 
     checkingBiometrics, 
     // Variables del Modal
@@ -29,10 +31,14 @@ function App() {
     handleCalculationSuccess, 
     handleSimulateUpgrade, 
     handleCancelSubscription,
-    handleReactivateSubscription, // 👈 1. AQUÍ LA TRAEMOS
+    handleReactivateSubscription,
+    handleDeleteAccount,
     handleLogout,
     updateWorkoutPlan 
   } = useAppLogic();
+
+  // 👇 ESTADO PARA EL MODAL DE CONFIGURACIÓN
+  const [showSettings, setShowSettings] = useState(false);
 
   // --- RENDERIZADO ---
 
@@ -64,7 +70,7 @@ function App() {
       ></div>
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-sportRed/10 rounded-full blur-3xl -z-10 animate-pulse"></div>
 
-      {/* MODAL GLOBAL */}
+      {/* MODAL GLOBAL (Pagos/Alertas) */}
       {paymentModal.show && (
         <StatusModal 
             type={paymentModal.type} 
@@ -77,18 +83,20 @@ function App() {
 
       <div className="relative z-10">
         
-        {/* 👇 2. AQUÍ SE LA PASAMOS AL NAVBAR */}
         <Navbar 
           onLogout={handleLogout} 
           userRole={userRole} 
           loadingRole={loadingRole} 
           userName={userName}
-          userId={session.user.id}
-          subscriptionEnd={subEndDate}
+          // userId y subscriptionEnd quitados porque Navbar ya no los usa
           autoRenew={autoRenew}
           onCancelSub={handleCancelSubscription}
           onSubscribe={handleSimulateUpgrade} 
-          onReactivate={handleReactivateSubscription} // <--- NUEVA PROP
+          onReactivate={handleReactivateSubscription}
+          onDeleteAccount={handleDeleteAccount}
+          
+          // 👇 PASAMOS LA FUNCIÓN PARA ABRIR EL MODAL DE SETTINGS
+          onOpenSettings={() => setShowSettings(true)}
         />
 
         <div className="pb-10">
@@ -134,6 +142,20 @@ function App() {
           </Routes>
         </div>
       </div>
+
+      {/* 👇 MODAL DE CONFIGURACIÓN DE CUENTA */}
+      {showSettings && (
+        <AccountSettingsModal 
+            userId={session.user.id}
+            currentName={userName}
+            onClose={() => setShowSettings(false)}
+            onUpdateSuccess={() => {
+                // Si cambiaron el nombre, recargamos para que se vea en el Navbar
+                window.location.reload(); 
+            }}
+        />
+      )}
+
     </div>
   );
 }

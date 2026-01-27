@@ -27,5 +27,6 @@ router.get("/tracker/:userId", trackerController.getDailyLogs);
 router.post("/tracker/add", trackerController.addLog);
 router.post("/tracker/analyze", trackerController.analyzeFood);
 router.delete("/tracker/:id", trackerController.deleteLog);
+router.delete("/user/delete/:id", trackerController.deleteUserAccount);
 
 module.exports = router;

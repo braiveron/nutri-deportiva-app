@@ -185,6 +185,7 @@ export function useAppLogic() {
   }, [location, session]);
 
   // --- HANDLERS ---
+
   const handleCalculationSuccess = async (plan) => {
     setUserMacros(plan);
     if (session?.user?.id) await loadBiometrics(session.user.id);
@@ -243,7 +244,38 @@ export function useAppLogic() {
     }
   };
 
-  // 👇 NUEVA FUNCIÓN: REACTIVACIÓN DIRECTA (SIN IR A MERCADOPAGO)
+  const handleDeleteAccount = async () => {
+    if (!session) return;
+    
+    const confirm1 = window.confirm("⚠️ ¿Estás seguro de que quieres eliminar tu cuenta? Esta acción no se puede deshacer.");
+    if (!confirm1) return;
+
+    const confirm2 = window.confirm("⛔ Se borrarán todos tus datos, recetas y progreso. ¿Confirmas la eliminación?");
+    if (!confirm2) return;
+
+    try {
+        setLoadingRole(true); // Usamos un estado de carga existente para bloquear UI
+        
+        // 1. Borrar datos en backend
+        const res = await api.deleteUserAccount(session.user.id);
+        
+        if (res.success) {
+            // 2. Cerrar sesión en Supabase
+            await supabase.auth.signOut();
+            // 3. Redirigir
+            navigate("/");
+            alert("Tu cuenta ha sido eliminada correctamente.");
+        } else {
+            alert("Error al eliminar: " + res.error);
+        }
+    } catch (error) {
+        console.error(error);
+        alert("Error de conexión");
+    } finally {
+        setLoadingRole(false);
+    }
+  };
+
   const handleReactivateSubscription = async () => {
       // 1. ESTADO DE CARGA
       setPaymentModal({
@@ -320,12 +352,13 @@ export function useAppLogic() {
     loadingRole,
     checkingBiometrics,
     paymentModal,         
+    updateWorkoutPlan,
     closePaymentModal,    
     handleCalculationSuccess,
     handleSimulateUpgrade, 
     handleCancelSubscription,
     handleReactivateSubscription,
     handleLogout,
-    updateWorkoutPlan
+    handleDeleteAccount
   };
 }

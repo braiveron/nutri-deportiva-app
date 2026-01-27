@@ -110,8 +110,6 @@ exports.analyzeFood = async (req, res) => {
   }
 };
 
-// ... al final del archivo ...
-
 // 4. BORRAR LOG
 exports.deleteLog = async (req, res) => {
   const { id } = req.params;
@@ -123,6 +121,32 @@ exports.deleteLog = async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error("Error DeleteLog:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// 5. BORRAR CUENTA COMPLETA
+exports.deleteUserAccount = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // 1. Borramos logs diarios
+    await supabase.from("daily_logs").delete().eq("user_id", id);
+
+    // 2. Borramos recetas guardadas
+    await supabase.from("saved_recipes").delete().eq("user_id", id);
+
+    // 3. Borramos el perfil (Esto suele ser lo más importante en la DB pública)
+    const { error } = await supabase.from("profiles").delete().eq("id", id);
+
+    if (error) throw error;
+
+    // NOTA: Para borrar el usuario de Auth (login) totalmente, se requiere la SERVICE_ROLE_KEY
+    // en el servidor. Por ahora, al borrar el perfil, la app ya no lo dejará entrar.
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error eliminando cuenta:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
