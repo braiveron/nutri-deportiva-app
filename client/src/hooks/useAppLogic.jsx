@@ -324,7 +324,7 @@ export function useAppLogic() {
     handleCalculationSuccess,
     handleSimulateUpgrade, 
     handleCancelSubscription,
-    handleReactivateSubscription, // 👈 ¡IMPORTANTÍSIMO! AHORA ESTÁ EXPORTADA
+    handleReactivateSubscription,
     handleLogout,
     updateWorkoutPlan
   };

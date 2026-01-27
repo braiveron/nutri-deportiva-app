@@ -81,6 +81,8 @@ export default function Navbar({ onLogout, userRole, loadingRole, userName, user
           <Link to="/perfil" className={`pb-1 transition-colors ${isActive('/perfil')}`}>Perfil</Link>
           <Link to="/cocina" className={`pb-1 transition-colors ${isActive('/cocina')}`}>Chef Personal</Link>
           <Link to="/entrenamiento" className={`pb-1 transition-colors ${isActive('/entrenamiento')}`}>Entreno</Link>
+          <Link to="/seguimiento" className={`pb-1 transition-colors ${isActive('/seguimiento')}`}>Seguimiento</Link>
+
         </div>
 
         {/* USUARIO */}

@@ -3,12 +3,8 @@ import RecipeChef from "../components/RecipeChef";
 import RecipeHistory from "../components/RecipeHistory";
 import PremiumLock from "../components/PremiumLock";
 
-// 👇 Recibimos onUnlock (que viene de App.jsx -> useAppLogic)
 export default function CocinaPage({ macros, userId, userRole, onUnlock }) {
   const [refreshHistory, setRefreshHistory] = useState(0);
-
-  // 🛑 Eliminamos toda la lógica manual de handleMercadoPago y loadingPay
-  // Ahora confiamos en la función onUnlock que hace todo el trabajo sucio.
 
   if (!macros) {
     return (
@@ -24,6 +20,8 @@ export default function CocinaPage({ macros, userId, userRole, onUnlock }) {
     <div className="flex flex-col items-center animate-fade-in w-full max-w-6xl mx-auto pt-10 pb-20 px-4">
        {userRole === 'pro' ? (
          <>
+          
+
            <RecipeChef 
                macros={macros} 
                userId={userId} 
@@ -37,11 +35,7 @@ export default function CocinaPage({ macros, userId, userRole, onUnlock }) {
                  CHEF PERSONAL <span className="text-sportRed">PRO</span>
              </h2>
              
-             {/* 👇 Usamos onUnlock directamente */}
              <PremiumLock onUnlock={onUnlock} />
-             
-             {/* Nota: El loading ahora lo maneja el modal global de App.jsx si fuera necesario, 
-                 o simplemente redirige rápido. Ya no necesitamos loading local aquí. */}
          </div>
        )}
     </div>

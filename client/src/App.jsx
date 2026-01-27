@@ -10,6 +10,7 @@ import StatusModal from "./components/StatusModal";
 import PerfilPage from "./pages/PerfilPage";
 import CocinaPage from "./pages/CocinaPage";
 import EntrenoPage from "./pages/EntrenoPage";
+import TrackerPage from "./pages/TrackerPage";
 
 function App() {
   const { 
@@ -118,6 +119,15 @@ function App() {
                     userRole={userRole}
                     userGoal={initialCalcData?.goal || 'mantener'}
                     onPlanCreated={updateWorkoutPlan}
+                    onUnlock={handleSimulateUpgrade}
+                />
+            } />
+
+            <Route path="/seguimiento" element={
+                <TrackerPage 
+                    macros={userMacros || initialCalcData}
+                    userId={session.user.id}
+                    userRole={userRole}
                     onUnlock={handleSimulateUpgrade}
                 />
             } />
