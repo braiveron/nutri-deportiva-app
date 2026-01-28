@@ -1,10 +1,14 @@
-// 👇 1. IMPORTANTE: Importamos el cliente de Supabase aquí
 import { supabase } from "../supabase";
 
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-const API_URL = BASE_URL.endsWith("/") ? BASE_URL.slice(0, -1) : BASE_URL;
+// 1. Configuración de URL inteligente
+const RAW_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+// Limpiamos barras duplicadas para evitar errores 404
+const API_URL = RAW_URL.endsWith("/") ? RAW_URL.slice(0, -1) : RAW_URL;
 
-// 👇 Función auxiliar para obtener la fecha local "YYYY-MM-DD"
+// Debug para confirmar en consola que estamos usando la URL de producción
+console.log("🚀 NutriApp API URL:", API_URL);
+console.log("🔗 Supabase URL:", import.meta.env.VITE_SUPABASE_URL);
+
 const getLocalDate = () => {
   const date = new Date();
   const offset = date.getTimezoneOffset();
@@ -20,18 +24,23 @@ export const api = {
       if (!response.ok) throw new Error("Error al obtener datos");
       return await response.json();
     } catch (error) {
-      console.error(error);
-      return { existe: false };
+      console.error("Error en getBiometrics:", error);
+      return { existe: false, datos: null }; // Retornamos estructura segura
     }
   },
 
   calculatePlan: async (formData) => {
-    const response = await fetch(`${API_URL}/calcular-plan`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData),
-    });
-    return await response.json();
+    try {
+      const response = await fetch(`${API_URL}/calcular-plan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      return await response.json();
+    } catch (error) {
+      console.error("Error en calculatePlan:", error);
+      throw error;
+    }
   },
 
   // --- PAGOS Y SUSCRIPCIÓN ---
@@ -63,7 +72,7 @@ export const api = {
     return await response.json();
   },
 
-  // --- IA GENERADORA (Recetas y Entrenos) ---
+  // --- IA GENERADORA ---
   createRecipe: async (userParams) => {
     const response = await fetch(`${API_URL}/crear-receta`, {
       method: "POST",
@@ -92,11 +101,7 @@ export const api = {
   },
 
   addDailyLog: async (logData) => {
-    const payload = {
-      ...logData,
-      date: logData.date || getLocalDate(),
-    };
-
+    const payload = { ...logData, date: logData.date || getLocalDate() };
     const response = await fetch(`${API_URL}/tracker/add`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -128,26 +133,17 @@ export const api = {
     return await response.json();
   },
 
-  // --- GESTIÓN DE CUENTA (Supabase Directo) ---
+  // --- GESTIÓN DE CUENTA ---
   updateUserProfile: async (userId, { nombre, apellido }) => {
-    const updates = {
-      nombre,
-      apellido,
-      updated_at: new Date(),
-    };
-
     const { error } = await supabase
       .from("profiles")
-      .update(updates)
+      .update({ nombre, apellido, updated_at: new Date() })
       .eq("id", userId);
-
     return { success: !error, error };
   },
 
   updateUserPassword: async (newPassword) => {
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword,
-    });
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
     return { success: !error, error };
   },
 
@@ -190,5 +186,3 @@ export const api = {
     return await response.json();
   },
 };
-console.log("DEBUG - API URL:", import.meta.env.VITE_API_URL);
-console.log("DEBUG - SUPABASE URL:", import.meta.env.VITE_SUPABASE_URL);

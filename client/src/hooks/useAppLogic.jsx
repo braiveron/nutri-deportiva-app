@@ -28,23 +28,24 @@ export function useAppLogic() {
   const location = useLocation(); 
 
   // --- FUNCIONES INTERNAS ---
-  const loadBiometrics = async (userId) => {
-    try {
-        const data = await api.getBiometrics(userId);
-        if (data.existe) {
-            if (data.datos.target_macros.todos_los_planes) {
-                const objetivo = data.datos.goal || 'mantener';
-                setUserMacros(data.datos.target_macros.todos_los_planes[objetivo]);
-            } else {
-                setUserMacros(data.datos.target_macros);
-            }
-            setInitialCalcData(data.datos);
+ const loadBiometrics = async (userId) => {
+  try {
+    const data = await api.getBiometrics(userId);
+    // Agregamos "?" para evitar el error de "undefined"
+    if (data?.existe && data?.datos?.target_macros) {
+        const macros = data.datos.target_macros;
+        if (macros.todos_los_planes) {
+            const objetivo = data.datos.goal || 'mantener';
+            setUserMacros(macros.todos_los_planes[objetivo]);
+        } else {
+            setUserMacros(macros);
         }
-    } catch (error) {
-        console.error("Error biometría", error);
+        setInitialCalcData(data.datos);
     }
-  };
-
+  } catch (error) {
+    console.error("Error biometría:", error);
+  }
+};
   const fetchUserProfile = async (userId) => {
     setLoadingRole(true);
     try {
