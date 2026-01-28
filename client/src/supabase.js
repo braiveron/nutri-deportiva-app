@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
-// REEMPLAZA ESTO CON TUS CLAVES DE SUPABASE (Settings -> API)
-const supabaseUrl = "https://wmxfwlzbgdypyjdtffbp.supabase.co";
-const supabaseKey = "sb_publishable_OTULBZFWxg-nQp1elSfpkA_b2L1RkO-";
+// Vite usa import.meta.env y el prefijo VITE_
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);

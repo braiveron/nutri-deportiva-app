@@ -1,8 +1,8 @@
 // 👇 1. IMPORTANTE: Importamos el cliente de Supabase aquí
 import { supabase } from "../supabase";
 
-// ⚠️ Ajusta el puerto si tu servidor no corre en el 5000
-const API_URL = "http://localhost:5000/api";
+// 👇 CAMBIO CLAVE: Usamos la variable de entorno de Vite o el localhost por defecto
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 // 👇 Función auxiliar para obtener la fecha local "YYYY-MM-DD"
 const getLocalDate = () => {
@@ -83,7 +83,6 @@ export const api = {
   },
 
   // --- TRACKER DIARIO ---
-
   getDailyLogs: async (userId) => {
     const dateStr = getLocalDate();
     const response = await fetch(
@@ -130,16 +129,13 @@ export const api = {
   },
 
   // --- GESTIÓN DE CUENTA (Supabase Directo) ---
-
-  // 1. Actualizar Datos Personales (Tabla profiles)
   updateUserProfile: async (userId, { nombre, apellido }) => {
     const updates = {
-      nombre, // Asegúrate que tu tabla 'profiles' tenga esta columna
-      apellido, // Asegúrate que tu tabla 'profiles' tenga esta columna
+      nombre,
+      apellido,
       updated_at: new Date(),
     };
 
-    // Ahora 'supabase' ya está definido gracias al import del principio
     const { error } = await supabase
       .from("profiles")
       .update(updates)
@@ -148,7 +144,6 @@ export const api = {
     return { success: !error, error };
   },
 
-  // 2. Cambiar Contraseña (Supabase Auth)
   updateUserPassword: async (newPassword) => {
     const { error } = await supabase.auth.updateUser({
       password: newPassword,
