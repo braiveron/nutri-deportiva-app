@@ -1,11 +1,15 @@
 import { supabase } from "../supabase";
 
-// 1. Configuración de URL inteligente (Ya confirmamos que Vercel las lee bien)
-const RAW_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+// 1. Forzamos el uso de la variable de entorno.
+// Eliminamos el "fallback" a localhost para obligar al build a usar Render.
+const RAW_URL = import.meta.env.VITE_API_URL || "";
 const API_URL = RAW_URL.endsWith("/") ? RAW_URL.slice(0, -1) : RAW_URL;
 
-// Debug para confirmar en consola
-console.log("🚀 API conectada a:", API_URL);
+// Debug para confirmar la URL exacta en la consola del navegador
+console.log(
+  "🌐 URL de API en uso:",
+  API_URL || "⚠️ ERROR: No se detectó URL de API",
+);
 
 const getLocalDate = () => {
   const date = new Date();
@@ -18,10 +22,10 @@ export const api = {
   // --- BIOMETRÍA ---
   getBiometrics: async (userId) => {
     try {
+      if (!API_URL) throw new Error("API_URL no configurada");
       const response = await fetch(`${API_URL}/mi-plan/${userId}`);
       if (!response.ok) return { existe: false, datos: null };
       const res = await response.json();
-      // Retornamos una estructura segura para evitar errores de 'undefined'
       return {
         existe: res.existe || false,
         datos: res.datos || null,
