@@ -1,173 +1,183 @@
-const supabaseAdmin = require("../config/supabaseAdmin");
+require("dotenv").config();
 
-// 1. CALCULAR PLAN (Genera los 3 escenarios: Perder, Mantener, Ganar)
-const calcularPlan = async (req, res) => {
-  const { userId, peso, altura, edad, genero, nivel_actividad, objetivo } =
-    req.body;
+const { createClient } = require("@supabase/supabase-js");
 
-  if (!peso || !altura || !edad) {
-    return res.status(400).json({ error: "Faltan datos obligatorios" });
-  }
+// INICIALIZACIÓN CON PERMISOS DE ADMIN (Service Role)
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+);
 
-  try {
-    // --- CÁLCULO DE CALORÍAS (TMB) ---
-    let tmb;
-    if (genero === "masculino") {
-      tmb = 10 * peso + 6.25 * altura - 5 * edad + 5;
-    } else {
-      tmb = 10 * peso + 6.25 * altura - 5 * edad - 161;
-    }
+// --- FUNCIONES DEL USUARIO ---
 
-    const factores = {
-      sedentario: 1.2,
-      ligero: 1.375,
-      moderado: 1.55,
-      intenso: 1.725,
-      muy_intenso: 1.9,
-    };
-
-    const caloriasBase = Math.round(tmb * (factores[nivel_actividad] || 1.2));
-
-    // --- GENERADOR DE MACROS ---
-    const crearPlan = (tipoObjetivo) => {
-      let calFinales = caloriasBase;
-      let p = 1.8,
-        g = 1.0;
-
-      if (tipoObjetivo === "perder") {
-        calFinales = Math.round(caloriasBase * 0.8);
-        p = 2.2;
-        g = 0.9;
-      }
-      if (tipoObjetivo === "ganar") {
-        calFinales = Math.round(caloriasBase * 1.1);
-        p = 2.0;
-        g = 1.0;
-      }
-
-      if (calFinales < tmb) calFinales = Math.round(tmb);
-
-      const proteina = Math.round(peso * p);
-      const grasa = Math.round(peso * g);
-      const calRestantes = calFinales - proteina * 4 - grasa * 9;
-      let carbos = Math.round(calRestantes / 4);
-      if (carbos < 50) carbos = 50;
-
-      return {
-        calorias_diarias: calFinales,
-        macros: { proteinas: proteina, carbohidratos: carbos, grasas: grasa },
-      };
-    };
-
-    const resultados = {
-      perder: crearPlan("perder"),
-      mantener: crearPlan("mantener"),
-      ganar: crearPlan("ganar"),
-    };
-
-    const planSeleccionado = resultados[objetivo] || resultados.mantener;
-
-    // --- GUARDAR EN DB ---
-    const dataToSave = {
-      ...planSeleccionado,
-      todos_los_planes: resultados,
-    };
-
-    if (userId) {
-      await supabaseAdmin.from("biometrics").insert({
-        user_id: userId,
-        weight_kg: peso,
-        height_cm: altura,
-        age: edad,
-        gender: genero,
-        activity_level: nivel_actividad,
-        goal: objetivo,
-        target_macros: dataToSave,
-      });
-    }
-
-    res.json({ mensaje: "Cálculo exitoso", plan: dataToSave });
-  } catch (error) {
-    console.error("Error en el cálculo:", error);
-    res.status(500).json({ error: "Error interno calculando macros" });
-  }
-};
-
-// 2. SUSCRIBIRSE (IMPORTANTE: Esto es lo que activa el PRO) 🚀
-const suscribirse = async (req, res) => {
-  const { userId } = req.body;
-
-  if (!userId) return res.status(400).json({ error: "Falta User ID" });
-
-  try {
-    const fechaVencimiento = new Date();
-    // Sumar 1 mes
-    fechaVencimiento.setMonth(fechaVencimiento.getMonth() + 1);
-
-    const { error } = await supabaseAdmin
-      .from("profiles")
-      .update({
-        subscription_tier: "pro", // <--- CAMBIA A PRO
-        subscription_end_date: fechaVencimiento.toISOString(),
-        auto_renew: true, // <--- ACTIVA RENOVACIÓN
-      })
-      .eq("id", userId);
-
-    if (error) throw error;
-
-    console.log(`✅ Usuario ${userId} ahora es PRO.`);
-    res.json({ success: true, vence: fechaVencimiento });
-  } catch (error) {
-    console.error("Error suscripción:", error);
-    res.status(500).json({ error: "Error al suscribir" });
-  }
-};
-
-// 3. CANCELAR SUSCRIPCIÓN (Solo apaga la renovación)
-const cancelarSuscripcion = async (req, res) => {
-  const { userId } = req.body;
-  if (!userId) return res.status(400).json({ error: "Falta User ID" });
-
-  try {
-    const { error } = await supabaseAdmin
-      .from("profiles")
-      .update({ auto_renew: false }) // <--- SOLO APAGA EL BOOLEANO
-      .eq("id", userId);
-
-    if (error) throw error;
-
-    console.log(`❌ Usuario ${userId} canceló renovación.`);
-    res.json({ success: true });
-  } catch (error) {
-    console.error("Error cancelación:", error);
-    res.status(500).json({ error: "Error al cancelar" });
-  }
-};
-
-// 4. OBTENER PLAN
-const obtenerPlan = async (req, res) => {
+// 1. OBTENER PLAN / PERFIL
+exports.obtenerPlan = async (req, res) => {
   const { userId } = req.params;
+
   try {
-    const { data, error } = await supabaseAdmin
-      .from("biometrics")
+    const { data, error } = await supabase
+      .from("profiles")
       .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(1)
+      .eq("id", userId)
       .single();
 
-    if (error && error.code !== "PGRST116") throw error;
-    if (!data) return res.json({ existe: false });
-
-    res.json({ existe: true, datos: data });
+    if (error) throw error;
+    const datos = data.datos_biometricos || data.user_metadata || {};
+    res.json({ existe: true, datos: { ...datos, ...data } });
   } catch (error) {
-    res.status(500).json({ error: "Error al recuperar datos" });
+    res.json({ existe: false, error: "Perfil no encontrado" });
   }
 };
 
-module.exports = {
-  calcularPlan,
-  suscribirse,
-  obtenerPlan,
-  cancelarSuscripcion,
+// 2. GUARDAR / CALCULAR PLAN
+exports.calcularPlan = async (req, res) => {
+  const { userId, ...formData } = req.body;
+  try {
+    const updates = { updated_at: new Date(), datos_biometricos: formData };
+    const { data, error } = await supabase
+      .from("profiles")
+      .update(updates)
+      .eq("id", userId)
+      .select();
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// 3. SUSCRIBIRSE
+exports.suscribirse = async (req, res) => {
+  const { userId } = req.body;
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({
+        subscription_tier: "pro",
+        subscription_status: "active",
+        auto_renew: true,
+        updated_at: new Date(),
+      })
+      .eq("id", userId)
+      .select();
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// 4. CANCELAR SUSCRIPCIÓN
+exports.cancelarSuscripcion = async (req, res) => {
+  const { userId } = req.body;
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({ auto_renew: false, updated_at: new Date() })
+      .eq("id", userId)
+      .select();
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// 5. CREAR TICKET DE SOPORTE
+exports.createSupportTicket = async (req, res) => {
+  const { userId, subject, message } = req.body;
+  if (!userId || !message)
+    return res.status(400).json({ success: false, error: "Datos incompletos" });
+  try {
+    const { data, error } = await supabase
+      .from("support_tickets")
+      .insert([{ user_id: userId, subject: subject || "Sin Asunto", message }])
+      .select()
+      .single();
+    if (error) throw error;
+    res.json({ success: true, ticket: data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: "Error al crear ticket" });
+  }
+};
+
+// --- FUNCIONES DE ADMINISTRADOR ---
+
+// 6. ADMIN: OBTENER TODOS LOS TICKETS
+exports.getAllTickets = async (req, res) => {
+  try {
+    // Usamos el comodín (*) para traer todo del perfil y evitar errores de nombres de columna
+    const { data, error } = await supabase
+      .from("support_tickets")
+      .select(`*, profiles (*)`)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    const ticketsLimpios = data.map((ticket) => {
+      const p = ticket.profiles || {};
+      // Buscamos cualquier variante de nombre que exista
+      const nombreReal =
+        p.nombre || p.first_name || p.full_name || p.name || "Usuario";
+      const apellidoReal = p.apellido || p.last_name || "";
+      const emailReal = p.email || "Email oculto";
+
+      return {
+        ...ticket,
+        profiles: {
+          email: emailReal,
+          nombre: nombreReal,
+          apellido: apellidoReal,
+        },
+      };
+    });
+
+    res.json({ success: true, tickets: ticketsLimpios });
+  } catch (error) {
+    console.error("Error Admin:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// 7. ADMIN: RESOLVER TICKET
+exports.resolveTicket = async (req, res) => {
+  const { ticketId } = req.body;
+  try {
+    const { data, error } = await supabase
+      .from("support_tickets")
+      .update({ status: "closed" })
+      .eq("id", ticketId)
+      .select();
+    if (error) throw error;
+    res.json({ success: true, ticket: data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// 👇👇 8. ELIMINAR CUENTA (LA SOLUCIÓN DEFINITIVA) 👇👇
+exports.deleteUserAccount = async (req, res) => {
+  const { userId } = req.body;
+
+  try {
+    console.log(`🗑️ Eliminando usuario definitivamente: ${userId}`);
+
+    // 1. Borrar del sistema de Autenticación (Esto es lo que faltaba)
+    // Al usar service_role, tenemos permiso para borrar usuarios de Auth.
+    const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+
+    if (authError) throw authError;
+
+    // 2. (Opcional) Borrar perfil manualmente si no tienes CASCADE en SQL
+    // Pero el paso 1 es el más importante.
+    await supabase.from("profiles").delete().eq("id", userId);
+
+    res.json({
+      success: true,
+      message: "Cuenta eliminada de la faz de la tierra.",
+    });
+  } catch (error) {
+    console.error("Error eliminando cuenta:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
 };

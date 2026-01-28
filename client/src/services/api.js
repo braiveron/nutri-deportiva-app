@@ -155,4 +155,43 @@ export const api = {
     });
     return { success: !error, error };
   },
+
+  // --- PESO CORPORAL ---
+  addWeightLog: async (userId, weight, date) => {
+    const response = await fetch(`${API_URL}/weight/add`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, weight, date }),
+    });
+    return await response.json();
+  },
+
+  getWeightHistory: async (userId) => {
+    const response = await fetch(`${API_URL}/weight/${userId}`);
+    return await response.json();
+  },
+
+  createSupportTicket: async (userId, subject, message) => {
+    const response = await fetch(`${API_URL}/support/create`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, subject, message }),
+    });
+    return await response.json();
+  },
+
+  // --- ADMIN ---
+  getAllTickets: async () => {
+    const response = await fetch(`${API_URL}/admin/tickets`);
+    return await response.json();
+  },
+
+  resolveTicket: async (ticketId) => {
+    const response = await fetch(`${API_URL}/admin/resolve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ticketId }),
+    });
+    return await response.json();
+  },
 };

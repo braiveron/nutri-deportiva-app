@@ -1,40 +1,39 @@
-const { supabase } = require("../supabase");
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-require("dotenv").config(); // 👈 Aseguramos que lea el .env aquí también
+// 1. Importamos la librería
+const { createClient } = require("@supabase/supabase-js");
 
-// Configuramos Gemini
-// Si 'gemini-flash-latest' te funcionaba antes, puedes probar poner ese.
-// Pero 'gemini-pro' es el estándar más estable para texto ahora mismo.
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
-// 1. OBTENER LOGS
+// 2. INICIALIZACIÓN PROFESIONAL
+// Usamos SUPABASE_SERVICE_ROLE_KEY para permisos de Admin (saltar RLS)
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+);
+
+// --- FUNCIONES DEL CONTROLADOR ---
+
+// 1. OBTENER LOGS DE UN DÍA
 exports.getDailyLogs = async (req, res) => {
-  const { userId } = req.params;
-  const { date } = req.query; // 👈 Leemos la fecha que manda el frontend (ej: "2026-01-27")
-
-  if (!date) {
-    return res.status(400).json({ success: false, error: "Falta la fecha" });
-  }
+  const { id } = req.params; // Esto espera que la ruta sea /tracker/:id
+  const { date } = req.query;
 
   try {
-    const { data, error } = await supabase
-      .from("daily_logs")
-      .select("*")
-      .eq("user_id", userId)
-      .eq("date", date); // Usamos esa fecha específica
+    let query = supabase.from("daily_logs").select("*").eq("user_id", id);
+
+    if (date) {
+      query = query.eq("date", date);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     res.json({ success: true, logs: data });
   } catch (error) {
-    console.error("Error GetLogs:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
 
-// 2. AGREGAR LOG
-exports.addLog = async (req, res) => {
-  // 👇 Agregamos 'date' aquí
-  const { userId, date, meal_name, calories, protein, carbs, fats } = req.body;
+// 2. AGREGAR COMIDA
+exports.addDailyLog = async (req, res) => {
+  const { userId, meal_name, calories, protein, carbs, fats, date } = req.body;
 
   try {
     const { data, error } = await supabase
@@ -42,85 +41,58 @@ exports.addLog = async (req, res) => {
       .insert([
         {
           user_id: userId,
-          date: date, // 👈 Guardamos con la fecha exacta que mandó el usuario
           meal_name,
-          calories: Number(calories),
-          protein: Number(protein),
-          carbs: Number(carbs),
-          fats: Number(fats),
+          calories,
+          protein,
+          carbs,
+          fats,
+          date: date || new Date().toISOString().split("T")[0],
         },
       ])
-      .select();
+      .select()
+      .single();
 
     if (error) throw error;
-    res.json({ success: true, log: data[0] });
+    res.json({ success: true, log: data });
   } catch (error) {
-    console.error("Error AddLog:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
 
-// 3. ANALIZAR COMIDA (Con Logs de Debug)
+// 3. ANALIZAR CON IA (Gemini)
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
 exports.analyzeFood = async (req, res) => {
   const { text } = req.body;
-
-  // 👇 MIRA TU TERMINAL CUANDO LE DES AL BOTÓN
-  console.log("---- INTENTO DE ANÁLISIS IA ----");
-  console.log("Texto recibido:", text);
-  console.log("API KEY existe:", !!process.env.GEMINI_API_KEY); // Debe decir true
-
   try {
-    const prompt = `
-      Actúa como un Nutricionista Experto.
-      Analiza: "${text}".
-      
-      Devuelve SOLO un JSON con estimación de: calories, protein, carbs, fats.
-      Si no es comida, devuelve todo en 0.
-      
-      Estructura JSON (sin markdown):
-      { "calories": 0, "protein": 0, "carbs": 0, "fats": 0 }
-    `;
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const prompt = `Analiza este alimento: "${text}". Devuelve SOLO un objeto JSON (sin markdown, sin texto extra) con estimaciones de: calories, protein, carbs, fats. Ejemplo: {"calories": 200, "protein": 10, "carbs": 20, "fats": 5}. Si no es alimento, devuelve campos en 0.`;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const responseText = response.text();
+    const textResponse = response.text();
 
-    console.log("Respuesta Gemini:", responseText); // 👈 Veremos qué responde la IA
+    // Limpieza para asegurar JSON válido
+    const jsonString = textResponse.replace(/```json|```/g, "").trim();
+    const nutrientData = JSON.parse(jsonString);
 
-    // Limpieza de JSON (Tu método infalible)
-    const jsonStartIndex = responseText.indexOf("{");
-    const jsonEndIndex = responseText.lastIndexOf("}") + 1;
-
-    let nutritionalData = { calories: 0, protein: 0, carbs: 0, fats: 0 };
-
-    if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
-      const jsonString = responseText.substring(jsonStartIndex, jsonEndIndex);
-      nutritionalData = JSON.parse(jsonString);
-    } else {
-      console.log("⚠️ No encontré JSON en la respuesta");
-    }
-
-    res.json({ success: true, data: nutritionalData });
+    res.json({ success: true, data: nutrientData });
   } catch (error) {
-    console.error("❌ ERROR CRÍTICO GEMINI:", error);
-    // Devolvemos success: false para que el frontend sepa que falló
-    res
-      .status(500)
-      .json({ success: false, error: "Error en el servidor de IA" });
+    console.error("Error Gemini:", error);
+    res.status(500).json({ success: false, error: "Error al analizar" });
   }
 };
 
-// 4. BORRAR LOG
+// 4. BORRAR COMIDA
 exports.deleteLog = async (req, res) => {
   const { id } = req.params;
-
   try {
     const { error } = await supabase.from("daily_logs").delete().eq("id", id);
 
     if (error) throw error;
     res.json({ success: true });
   } catch (error) {
-    console.error("Error DeleteLog:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
@@ -130,23 +102,63 @@ exports.deleteUserAccount = async (req, res) => {
   const { id } = req.params;
 
   try {
-    // 1. Borramos logs diarios
+    // Borramos logs diarios
     await supabase.from("daily_logs").delete().eq("user_id", id);
-
-    // 2. Borramos recetas guardadas
+    // Borramos recetas guardadas
     await supabase.from("saved_recipes").delete().eq("user_id", id);
-
-    // 3. Borramos el perfil (Esto suele ser lo más importante en la DB pública)
+    // Borramos historial de peso
+    await supabase.from("weight_logs").delete().eq("user_id", id);
+    // Borramos el perfil
     const { error } = await supabase.from("profiles").delete().eq("id", id);
 
     if (error) throw error;
 
-    // NOTA: Para borrar el usuario de Auth (login) totalmente, se requiere la SERVICE_ROLE_KEY
-    // en el servidor. Por ahora, al borrar el perfil, la app ya no lo dejará entrar.
-
     res.json({ success: true });
   } catch (error) {
     console.error("Error eliminando cuenta:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// 6. REGISTRAR PESO (NUEVO)
+exports.addWeightLog = async (req, res) => {
+  const { userId, weight, date } = req.body;
+
+  // Validación básica
+  if (!userId || !weight) {
+    return res
+      .status(400)
+      .json({ success: false, error: "Faltan datos (userId o weight)" });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("weight_logs")
+      .insert([{ user_id: userId, weight, date }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, log: data });
+  } catch (error) {
+    console.error("Error guardando peso:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// 7. OBTENER HISTORIAL DE PESO (NUEVO)
+exports.getWeightHistory = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const { data, error } = await supabase
+      .from("weight_logs")
+      .select("*")
+      .eq("user_id", id)
+      .order("date", { ascending: true });
+
+    if (error) throw error;
+    res.json({ success: true, history: data });
+  } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 };

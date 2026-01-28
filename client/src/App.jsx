@@ -1,4 +1,4 @@
-import { useState } from "react"; // 👈 Importamos useState
+import { useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAppLogic } from "./hooks/useAppLogic"; 
 
@@ -6,13 +6,16 @@ import { useAppLogic } from "./hooks/useAppLogic";
 import Navbar from "./components/NavBar";
 import Auth from "./components/Auth";
 import StatusModal from "./components/StatusModal"; 
-import AccountSettingsModal from "./components/AccountSettingsModal"; // 👈 Importamos el Modal
+import AccountSettingsModal from "./components/AccountSettingsModal";
+import SupportModal from "./components/SupportModal";
 
 // Páginas
 import PerfilPage from "./pages/PerfilPage";
 import CocinaPage from "./pages/CocinaPage";
 import EntrenoPage from "./pages/EntrenoPage";
 import TrackerPage from "./pages/TrackerPage";
+import AdminPage from "./pages/AdminPage";
+import WelcomePage from "./pages/WelcomePage"; 
 
 function App() {
   const { 
@@ -21,13 +24,10 @@ function App() {
     userRole, 
     initialCalcData, 
     autoRenew, 
-    // subEndDate, // Ya no lo usamos en UI directa
     loadingRole, 
     checkingBiometrics, 
-    // Variables del Modal
     paymentModal,       
     closePaymentModal,
-    // Funciones
     handleCalculationSuccess, 
     handleSimulateUpgrade, 
     handleCancelSubscription,
@@ -37,8 +37,9 @@ function App() {
     updateWorkoutPlan 
   } = useAppLogic();
 
-  // 👇 ESTADO PARA EL MODAL DE CONFIGURACIÓN
+  // Estados de Modales
   const [showSettings, setShowSettings] = useState(false);
+  const [showSupport, setShowSupport] = useState(false); 
 
   // --- RENDERIZADO ---
 
@@ -55,7 +56,12 @@ function App() {
     return <Auth />;
   }
 
-  const userName = session.user.user_metadata.full_name || "Usuario";
+  // Lógica para UX: Nombre y Estado del Perfil
+  const fullName = session.user.user_metadata.full_name || "Usuario";
+  const firstName = fullName.split(' ')[0]; // Usamos solo el primer nombre para la bienvenida
+  
+  // 👉 Detectamos si ya completó el formulario inicial (si tiene peso registrado)
+  const hasBiometrics = initialCalcData && initialCalcData.peso > 0;
 
   return (
     <div className="min-h-screen relative bg-gray-50 text-gray-800 font-sans overflow-hidden selection:bg-sportRed selection:text-white">
@@ -83,25 +89,41 @@ function App() {
 
       <div className="relative z-10">
         
+        {/* NAVBAR */}
+        {/* Nota: Podrías ocultar el Navbar en /bienvenida si quisieras usando useLocation */}
         <Navbar 
           onLogout={handleLogout} 
           userRole={userRole} 
           loadingRole={loadingRole} 
-          userName={userName}
-          // userId y subscriptionEnd quitados porque Navbar ya no los usa
+          userName={fullName}
           autoRenew={autoRenew}
           onCancelSub={handleCancelSubscription}
           onSubscribe={handleSimulateUpgrade} 
           onReactivate={handleReactivateSubscription}
           onDeleteAccount={handleDeleteAccount}
-          
-          // 👇 PASAMOS LA FUNCIÓN PARA ABRIR EL MODAL DE SETTINGS
           onOpenSettings={() => setShowSettings(true)}
+          onOpenSupport={() => setShowSupport(true)} 
         />
 
         <div className="pb-10">
           <Routes>
-            <Route path="/" element={<Navigate to="/perfil" />} />
+            
+            {/* 👇 REDIRECCIÓN INTELIGENTE 👇 */}
+            {/* Si entra a la raíz: Si tiene datos -> Perfil. Si no -> Bienvenida */}
+            <Route 
+                path="/" 
+                element={<Navigate to={hasBiometrics ? "/perfil" : "/bienvenida"} replace />} 
+            />
+
+            {/* 👇 NUEVA RUTA DE BIENVENIDA 👇 */}
+            <Route 
+                path="/bienvenida" 
+                element={
+                   
+                        <WelcomePage userName={firstName} /> 
+                   
+                } 
+            />
             
             <Route path="/perfil" element={
                 <PerfilPage 
@@ -139,20 +161,27 @@ function App() {
                     onUnlock={handleSimulateUpgrade}
                 />
             } />
+
+            <Route path="/admin" element={
+                <AdminPage userRole={userRole} />
+            } />
           </Routes>
         </div>
       </div>
 
-      {/* 👇 MODAL DE CONFIGURACIÓN DE CUENTA */}
+      {/* MODAL DE CONFIGURACIÓN DE CUENTA */}
       {showSettings && (
         <AccountSettingsModal 
             userId={session.user.id}
-            currentName={userName}
+            currentName={fullName}
             onClose={() => setShowSettings(false)}
-            onUpdateSuccess={() => {
-                // Si cambiaron el nombre, recargamos para que se vea en el Navbar
-                window.location.reload(); 
-            }}
+            onUpdateSuccess={() => window.location.reload()}
+        />
+      )}
+      {showSupport && (
+        <SupportModal 
+            userId={session.user.id}
+            onClose={() => setShowSupport(false)}
         />
       )}
 

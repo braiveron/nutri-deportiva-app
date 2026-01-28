@@ -1,7 +1,11 @@
+import { useState } from "react";
 import MacroTracker from "../components/MacroTracker";
+import WeightTracker from "../components/WeightTracker"; // 👈 Importamos el nuevo componente
 import PremiumLock from "../components/PremiumLock";
 
 export default function TrackerPage({ macros, userId, userRole, onUnlock }) {
+  // Estado para el Toggle: 'macros' o 'weight'
+  const [activeTab, setActiveTab] = useState('macros');
 
   // 1. NORMALIZACIÓN DE DATOS
   const detectarMacrosReales = (data) => {
@@ -31,6 +35,7 @@ export default function TrackerPage({ macros, userId, userRole, onUnlock }) {
 
   // 2. RENDERIZADO
 
+  // CASO A: Usuario NO PRO (Candado limpio)
   if (userRole !== 'pro') {
     return (
         <div className="flex flex-col items-center pt-10 animate-fade-in px-4 w-full">
@@ -42,7 +47,9 @@ export default function TrackerPage({ macros, userId, userRole, onUnlock }) {
     );
   }
 
-  if (!finalMacros) {
+  // CASO B: Usuario PRO pero SIN DATOS DE MACROS
+  // (Solo mostramos error si está intentando ver la pestaña de Macros)
+  if (activeTab === 'macros' && !finalMacros) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] animate-fade-in px-4 text-center">
         <span className="text-6xl mb-4">⚠️</span>
@@ -52,10 +59,48 @@ export default function TrackerPage({ macros, userId, userRole, onUnlock }) {
     );
   }
 
+  // CASO C: Usuario PRO con DATOS (App Funcionando)
   return (
-    // 👇 CAMBIO AQUÍ: 'max-w-7xl' para que entren bien las dos columnas
     <div className="flex flex-col items-center pt-10 pb-20 px-4 animate-fade-in w-full max-w-7xl mx-auto">
-        <MacroTracker userId={userId} userMacros={finalMacros} />
+        
+        {/* INTERRUPTOR (TOGGLE) */}
+        <div className="mb-8">
+            <div className="flex bg-gray-200 p-1 rounded-full relative">
+                {/* Fondo blanco animado */}
+                <div 
+                    className={`absolute top-1 bottom-1 w-[50%] bg-white rounded-full shadow-sm transition-all duration-300 ease-out ${
+                        activeTab === 'macros' ? 'left-1' : 'left-[49%]'
+                    }`}
+                ></div>
+                
+                <button 
+                    onClick={() => setActiveTab('macros')}
+                    className={`relative z-10 px-6 py-2 w-32 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
+                        activeTab === 'macros' ? 'text-sportRed' : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                >
+                    Diario
+                </button>
+                <button 
+                    onClick={() => setActiveTab('weight')}
+                    className={`relative z-10 px-6 py-2 w-32 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
+                        activeTab === 'weight' ? 'text-sportRed' : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                >
+                    Peso
+                </button>
+            </div>
+        </div>
+
+        {/* CONTENIDO SEGÚN PESTAÑA */}
+        <div className="w-full">
+            {activeTab === 'macros' ? (
+                <MacroTracker userId={userId} userMacros={finalMacros} />
+            ) : (
+                <WeightTracker userId={userId} />
+            )}
+        </div>
+
     </div>
   );
 }

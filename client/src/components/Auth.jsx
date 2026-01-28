@@ -6,7 +6,8 @@ const BACKGROUND_IMAGES = [
   "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=2070&auto=format&fit=crop", 
   "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=2053&auto=format&fit=crop", 
   "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?q=80&w=2070&auto=format&fit=crop", 
-"https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?q=80&w=2070&auto=format&fit=crop",];
+  "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?q=80&w=2070&auto=format&fit=crop",
+];
 
 export default function Auth() {
   const [loading, setLoading] = useState(false);
@@ -82,15 +83,27 @@ export default function Auth() {
       if (view === 'login') {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        // Si hay éxito, App.jsx detectará la sesión automáticamente
       
       } else if (view === 'register') {
-        const { error } = await supabase.auth.signUp({
+        // Obtenemos 'data' para saber si se creó sesión o si requiere confirmación
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: { data: { full_name: fullName } },
         });
+        
         if (error) throw error;
-        alert("¡Registro exitoso! Revisa tu correo para confirmar."); 
+
+        // LÓGICA DE ÉXITO SIN ALERT
+        if (data.user && !data.session) {
+            // Caso: Requiere confirmar email
+            setSuccessMsg("¡Cuenta creada! Revisa tu correo para activar tu cuenta.");
+            setView('login'); // Los movemos al login para que esperen el email
+            setFullName(''); // Limpiamos campos
+            setPassword('');
+        }
+        // Caso: No requiere confirmación (data.session existe) -> App.jsx redirigirá solo.
       
       } else if (view === 'recovery') {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -273,6 +286,7 @@ export default function Auth() {
                             onClick={() => {
                             setView(view === 'login' ? 'register' : 'login');
                             setErrors({});
+                            setSuccessMsg(''); // Limpiar mensajes de éxito al cambiar
                             }}
                             className="text-sportRed font-bold uppercase text-xs tracking-widest hover:underline mt-1"
                         >

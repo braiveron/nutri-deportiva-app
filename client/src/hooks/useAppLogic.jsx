@@ -8,7 +8,7 @@ export function useAppLogic() {
   
   // Estados de Datos
   const [userMacros, setUserMacros] = useState(null);
-  const [userRole, setUserRole] = useState(null);
+  const [userRole, setUserRole] = useState(null); // 'free', 'pro', 'admin'
   const [initialCalcData, setInitialCalcData] = useState(null);
   
   // Estados de Suscripción
@@ -48,9 +48,10 @@ export function useAppLogic() {
   const fetchUserProfile = async (userId) => {
     setLoadingRole(true);
     try {
+      // 👇 CAMBIO 1: Agregamos 'role' a la consulta
       const { data, error } = await supabase
         .from('profiles')
-        .select('subscription_tier, subscription_end_date, auto_renew')
+        .select('subscription_tier, subscription_end_date, auto_renew, role')
         .eq('id', userId)
         .maybeSingle(); 
       
@@ -59,14 +60,23 @@ export function useAppLogic() {
       if (data) {
         setSubEndDate(data.subscription_end_date);
         setAutoRenew(data.auto_renew);
-        const hoy = new Date();
-        const vencimiento = data.subscription_end_date ? new Date(data.subscription_end_date) : null;
         
-        // Lógica: Si ya venció es FREE, sino mantenemos el tier que tenga (PRO)
-        if (vencimiento && vencimiento < hoy) {
-            setUserRole('free');
+        // 👇 CAMBIO 2: Lógica de Prioridad de Roles
+        // 1. Si es ADMIN en la base de datos, es Admin (ignora fechas de pago)
+        if (data.role === 'admin') {
+            setUserRole('admin');
         } else {
-            setUserRole(data.subscription_tier);
+            // 2. Si no es admin, chequeamos si es PRO o FREE según fechas
+            const hoy = new Date();
+            const vencimiento = data.subscription_end_date ? new Date(data.subscription_end_date) : null;
+            
+            if (vencimiento && vencimiento < hoy) {
+                // Si ya venció, vuelve a ser FREE
+                setUserRole('free');
+            } else {
+                // Si no ha vencido, mantiene su tier (ej: 'pro')
+                setUserRole(data.subscription_tier || 'free');
+            }
         }
         return data;
       }
@@ -104,27 +114,23 @@ export function useAppLogic() {
   }, [session?.user?.id]);
 
 
-  // 👇 DETECCIÓN DE PAGO CON "CANDADO" (Evita bucles infinitos)
+  // 👇 DETECCIÓN DE PAGO CON "CANDADO"
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const status = params.get("collection_status");
     
-    // Solo entramos si hay status, sesión y NO hemos procesado esto ya en esta sesión
     const yaProcesado = sessionStorage.getItem("payment_has_been_processed");
 
     if (status && session?.user?.id) {
         
-        // 1. SIEMPRE LIMPIAMOS LA URL PRIMERO
         window.history.replaceState({}, document.title, location.pathname);
 
-        // 2. SI YA LO PROCESAMOS ANTES, PARAMOS AQUÍ (EL FIX DEFINITIVO)
         if (yaProcesado === "true") {
             console.log("🛑 Pago ya procesado anteriormente. Omitiendo modal.");
             return; 
         }
 
         if (status === "approved") {
-            // 👇 MARCAMOS INMEDIATAMENTE COMO PROCESADO
             sessionStorage.setItem("payment_has_been_processed", "true");
 
             const processPayment = async () => {
@@ -137,7 +143,6 @@ export function useAppLogic() {
                         setUserRole("pro");
                         setAutoRenew(true);
                         
-                        // Recargamos datos para confirmar fechas
                         const updatedProfile = await fetchUserProfile(session.user.id);
                         
                         let modalTitle = '¡Bienvenido a PRO!';
@@ -169,7 +174,6 @@ export function useAppLogic() {
                     }
                 } catch (err) {
                     console.error(err);
-                    // Si falló, quizás querramos permitir reintentar, así que borramos el candado
                     sessionStorage.removeItem("payment_has_been_processed");
                     setPaymentModal({ show: true, type: 'error', title: 'Error', message: 'Hubo un problema, contáctanos.', onConfirm: null });
                 }
@@ -178,7 +182,6 @@ export function useAppLogic() {
             processPayment();
 
         } else if (status === "failure") {
-             // En fallo no ponemos candado para que pueda intentar de nuevo
              setPaymentModal({ show: true, type: 'error', title: 'Pago Rechazado', message: 'No se pudo procesar el pago.', onConfirm: null });
         }
     }
@@ -197,7 +200,6 @@ export function useAppLogic() {
     const isReactivation = userRole === 'pro';
     localStorage.setItem("payment_intent", isReactivation ? "reactivation" : "new");
     
-    // 👇 NUEVO: "Abrimos el candado" para permitir que el próximo pago sí muestre el modal
     sessionStorage.removeItem("payment_has_been_processed"); 
 
     try {
@@ -213,7 +215,6 @@ export function useAppLogic() {
   };
 
   const proceedWithCancellation = async () => {
-      // 1. ESTADO DE CARGA: No cerramos, cambiamos a loading
       setPaymentModal({
           show: true,
           type: 'loading',
@@ -229,7 +230,6 @@ export function useAppLogic() {
         
         if (data.success) {
             setAutoRenew(false); 
-            // 2. ESTADO DE ÉXITO
             setPaymentModal({ 
                 show: true, type: 'success', title: 'Suscripción Cancelada', 
                 message: 'Tu suscripción seguirá activa hasta el final del periodo actual. No se te volverá a cobrar.',
@@ -254,15 +254,12 @@ export function useAppLogic() {
     if (!confirm2) return;
 
     try {
-        setLoadingRole(true); // Usamos un estado de carga existente para bloquear UI
+        setLoadingRole(true); 
         
-        // 1. Borrar datos en backend
         const res = await api.deleteUserAccount(session.user.id);
         
         if (res.success) {
-            // 2. Cerrar sesión en Supabase
             await supabase.auth.signOut();
-            // 3. Redirigir
             navigate("/");
             alert("Tu cuenta ha sido eliminada correctamente.");
         } else {
@@ -277,7 +274,6 @@ export function useAppLogic() {
   };
 
   const handleReactivateSubscription = async () => {
-      // 1. ESTADO DE CARGA
       setPaymentModal({
           show: true,
           type: 'loading',
@@ -289,13 +285,11 @@ export function useAppLogic() {
       if (!session) return;
 
       try {
-        // Asumiendo que api.subscribeUser reactiva el flag si la cuenta sigue vigente
         const response = await api.subscribeUser(session.user.id);
         
         if (response.success) {
             setAutoRenew(true);
             
-            // Calculamos fecha para el mensaje
             const updatedProfile = await fetchUserProfile(session.user.id);
             let fechaTexto = "el próximo vencimiento";
             
@@ -304,7 +298,6 @@ export function useAppLogic() {
                 fechaTexto = dateObj.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
             }
 
-            // 2. ESTADO DE ÉXITO
             setPaymentModal({ 
                 show: true, type: 'success', title: '¡Membresía Reactivada!', 
                 message: `La renovación automática está activa de nuevo. Tu próximo cobro será el ${fechaTexto}.`,
@@ -339,7 +332,7 @@ export function useAppLogic() {
   };
 
   const closePaymentModal = () => {
-     setPaymentModal({ ...paymentModal, show: false });
+       setPaymentModal({ ...paymentModal, show: false });
   };
 
   return {

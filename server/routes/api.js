@@ -1,4 +1,3 @@
-// 📂 Archivo: server/routes/api.js
 const express = require("express");
 const router = express.Router();
 
@@ -7,13 +6,16 @@ const userController = require("../controllers/userController");
 const chefController = require("../controllers/chefController");
 const trainerController = require("../controllers/trainerController");
 const paymentController = require("../controllers/paymentController");
-const trackerController = require("../controllers/trackerController"); // 👈 1. ¿ESTO ESTÁ AQUÍ?
+const trackerController = require("../controllers/trackerController");
 
 // --- RUTAS DE USUARIO ---
 router.post("/calcular-plan", userController.calcularPlan);
 router.post("/suscribirse", userController.suscribirse);
 router.post("/cancelar-suscripcion", userController.cancelarSuscripcion);
 router.get("/mi-plan/:userId", userController.obtenerPlan);
+
+// 👇 CORRECCIÓN: La función está en userController y usa POST (recibe body)
+router.post("/delete-account", userController.deleteUserAccount);
 
 // --- RUTAS IA GENERATIVA ---
 router.post("/crear-receta", chefController.crearReceta);
@@ -23,10 +25,20 @@ router.post("/crear-entreno", trainerController.crearEntreno);
 router.post("/crear-pago", paymentController.createPreference);
 
 // --- RUTAS TRACKER ---
-router.get("/tracker/:userId", trackerController.getDailyLogs);
-router.post("/tracker/add", trackerController.addLog);
+router.get("/tracker/:id", trackerController.getDailyLogs);
+router.post("/tracker/add", trackerController.addDailyLog);
 router.post("/tracker/analyze", trackerController.analyzeFood);
 router.delete("/tracker/:id", trackerController.deleteLog);
-router.delete("/user/delete/:id", trackerController.deleteUserAccount);
+
+// RUTAS DE PESO
+router.post("/weight/add", trackerController.addWeightLog);
+router.get("/weight/:id", trackerController.getWeightHistory);
+
+// RUTA DE TICKETS
+router.post("/support/create", userController.createSupportTicket);
+
+// RUTAS ADMIN
+router.get("/admin/tickets", userController.getAllTickets);
+router.post("/admin/resolve", userController.resolveTicket);
 
 module.exports = router;
