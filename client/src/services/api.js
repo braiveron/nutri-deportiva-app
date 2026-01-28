@@ -1,11 +1,10 @@
 import { supabase } from "../supabase";
 
-// 1. Forzamos el uso de la variable de entorno.
-// Eliminamos el "fallback" a localhost para obligar al build a usar Render.
+// 1. Forzamos el uso de la variable. Si no existe, la app fallará con un error claro.
 const RAW_URL = import.meta.env.VITE_API_URL || "";
 const API_URL = RAW_URL.endsWith("/") ? RAW_URL.slice(0, -1) : RAW_URL;
 
-// Debug para confirmar la URL exacta en la consola del navegador
+// Debug para confirmar que NO hay localhost aquí
 console.log(
   "🌐 URL de API en uso:",
   API_URL || "⚠️ ERROR: No se detectó URL de API",
@@ -19,17 +18,13 @@ const getLocalDate = () => {
 };
 
 export const api = {
-  // --- BIOMETRÍA ---
   getBiometrics: async (userId) => {
     try {
-      if (!API_URL) throw new Error("API_URL no configurada");
+      if (!API_URL) throw new Error("API_URL faltante");
       const response = await fetch(`${API_URL}/mi-plan/${userId}`);
       if (!response.ok) return { existe: false, datos: null };
       const res = await response.json();
-      return {
-        existe: res.existe || false,
-        datos: res.datos || null,
-      };
+      return { existe: res.existe || false, datos: res.datos || null };
     } catch (error) {
       console.error("Error en getBiometrics:", error);
       return { existe: false, datos: null };
@@ -38,6 +33,7 @@ export const api = {
 
   calculatePlan: async (formData) => {
     try {
+      if (!API_URL) throw new Error("API_URL faltante");
       const response = await fetch(`${API_URL}/calcular-plan`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -51,7 +47,6 @@ export const api = {
     }
   },
 
-  // --- PAGOS Y SUSCRIPCIÓN ---
   createPaymentPreference: async (userId) => {
     const response = await fetch(`${API_URL}/crear-pago`, {
       method: "POST",
@@ -79,7 +74,6 @@ export const api = {
     return await response.json();
   },
 
-  // --- IA GENERADORA ---
   createRecipe: async (userParams) => {
     const response = await fetch(`${API_URL}/crear-receta`, {
       method: "POST",
@@ -98,7 +92,6 @@ export const api = {
     return await response.json();
   },
 
-  // --- TRACKER DIARIO ---
   getDailyLogs: async (userId) => {
     const dateStr = getLocalDate();
     const response = await fetch(
@@ -140,7 +133,6 @@ export const api = {
     return await response.json();
   },
 
-  // --- GESTIÓN DE CUENTA ---
   updateUserProfile: async (userId, { nombre, apellido }) => {
     const { error } = await supabase
       .from("profiles")
@@ -154,7 +146,6 @@ export const api = {
     return { success: !error, error };
   },
 
-  // --- PESO CORPORAL ---
   addWeightLog: async (userId, weight, date) => {
     const response = await fetch(`${API_URL}/weight/add`, {
       method: "POST",
@@ -178,7 +169,6 @@ export const api = {
     return await response.json();
   },
 
-  // --- ADMIN ---
   getAllTickets: async () => {
     const response = await fetch(`${API_URL}/admin/tickets`);
     return await response.json();
