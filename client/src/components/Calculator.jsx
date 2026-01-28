@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'; 
 import { useNavigate } from 'react-router-dom'; 
+import { api } from "../services/api";
 
 const DESCRIPCIONES = {
   sedentario: "Oficina / Poco Movimiento",
@@ -79,21 +80,17 @@ export default function Calculator({ onCalculationSuccess, initialData, userId }
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   // 👇 FUNCIÓN ACTUALIZADA Y CORREGIDA
-  const realizarCalculo = async (datosParaCalcular, esManual = false) => {
-    
-    // 1. VALIDACIÓN
+// client/src/components/Calculator.jsx
+
+const realizarCalculo = async (datosParaCalcular, esManual = false) => {
     if (!datosParaCalcular.peso || !datosParaCalcular.altura || !datosParaCalcular.edad) {
-        console.warn("Intento de cálculo incompleto (silenciado)");
         return; 
     }
 
     setLoading(true);
     try {
-      // Intentamos conectar al servidor
-      const response = await fetch('http://localhost:5000/api/calcular-plan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      // ✅ CAMBIO CLAVE: Usamos el servicio centralizado 'api' en lugar de un fetch manual
+      const data = await api.calculatePlan({
           userId: userId, 
           peso: Number(datosParaCalcular.peso), 
           altura: Number(datosParaCalcular.altura),
@@ -101,16 +98,8 @@ export default function Calculator({ onCalculationSuccess, initialData, userId }
           genero: datosParaCalcular.genero,
           nivel_actividad: datosParaCalcular.nivel_actividad,
           objetivo: datosParaCalcular.objetivo
-        }),
       });
 
-      if (!response.ok) {
-        throw new Error(`Error del Servidor: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      // Verificamos que la respuesta tenga sentido
       if (!data || !data.plan) {
          throw new Error("Respuesta vacía del servidor");
       }
@@ -118,32 +107,24 @@ export default function Calculator({ onCalculationSuccess, initialData, userId }
       setLastSavedData(datosParaCalcular);
 
       if (data.plan.todos_los_planes) {
-          // CASO A: Respuesta con múltiples planes
           setTodosLosPlanes(data.plan.todos_los_planes);
           const planActual = data.plan.todos_los_planes[datosParaCalcular.objetivo];
           setResultadoLocal(planActual);
-          
-          // Notificar al padre (Gráfico)
           if(onCalculationSuccess) onCalculationSuccess(planActual);
       } else {
-          // CASO B: Respuesta con un único plan
           setResultadoLocal(data.plan);
-          
-          // 👇 ESTA ES LA LÍNEA QUE FALTABA PARA QUE EL GRÁFICO NO DESAPAREZCA
           if(onCalculationSuccess) onCalculationSuccess(data.plan);
       }
 
     } catch (error) {
       console.error("Error en cálculo:", error);
-      // Solo mostramos alerta si fue un click manual
       if (esManual) {
          alert("Error al calcular: Verifica que el servidor (Backend) esté funcionando.");
       }
     } finally {
       setLoading(false);
     }
-  };
-
+};
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.peso || !formData.altura || !formData.edad) {
