@@ -28,22 +28,23 @@ export function useAppLogic() {
   const location = useLocation(); 
 
   // --- FUNCIONES INTERNAS ---
- const loadBiometrics = async (userId) => {
+// En useAppLogic.jsx, cambia la función loadBiometrics por esta:
+const loadBiometrics = async (userId) => {
   try {
-    const data = await api.getBiometrics(userId);
-    // Agregamos "?" para evitar el error de "undefined"
-    if (data?.existe && data?.datos?.target_macros) {
-        const macros = data.datos.target_macros;
+    const res = await api.getBiometrics(userId);
+    // Usamos encadenamiento opcional (?.) para evitar errores si algo falta
+    if (res?.existe && res?.datos?.target_macros) {
+        const macros = res.datos.target_macros;
         if (macros.todos_los_planes) {
-            const objetivo = data.datos.goal || 'mantener';
+            const objetivo = res.datos.goal || 'mantener';
             setUserMacros(macros.todos_los_planes[objetivo]);
         } else {
             setUserMacros(macros);
         }
-        setInitialCalcData(data.datos);
+        setInitialCalcData(res.datos);
     }
   } catch (error) {
-    console.error("Error biometría:", error);
+    console.error("Error cargando biometría:", error);
   }
 };
   const fetchUserProfile = async (userId) => {

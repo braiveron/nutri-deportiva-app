@@ -1,13 +1,11 @@
 import { supabase } from "../supabase";
 
-// 1. Configuración de URL inteligente
+// 1. Configuración de URL inteligente (Ya confirmamos que Vercel las lee bien)
 const RAW_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-// Limpiamos barras duplicadas para evitar errores 404
 const API_URL = RAW_URL.endsWith("/") ? RAW_URL.slice(0, -1) : RAW_URL;
 
-// Debug para confirmar en consola que estamos usando la URL de producción
-console.log("🚀 NutriApp API URL:", API_URL);
-console.log("🔗 Supabase URL:", import.meta.env.VITE_SUPABASE_URL);
+// Debug para confirmar en consola
+console.log("🚀 API conectada a:", API_URL);
 
 const getLocalDate = () => {
   const date = new Date();
@@ -21,11 +19,16 @@ export const api = {
   getBiometrics: async (userId) => {
     try {
       const response = await fetch(`${API_URL}/mi-plan/${userId}`);
-      if (!response.ok) throw new Error("Error al obtener datos");
-      return await response.json();
+      if (!response.ok) return { existe: false, datos: null };
+      const res = await response.json();
+      // Retornamos una estructura segura para evitar errores de 'undefined'
+      return {
+        existe: res.existe || false,
+        datos: res.datos || null,
+      };
     } catch (error) {
       console.error("Error en getBiometrics:", error);
-      return { existe: false, datos: null }; // Retornamos estructura segura
+      return { existe: false, datos: null };
     }
   },
 
@@ -36,6 +39,7 @@ export const api = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
+      if (!response.ok) throw new Error("Error en el servidor");
       return await response.json();
     } catch (error) {
       console.error("Error en calculatePlan:", error);
@@ -50,7 +54,6 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId }),
     });
-    if (!response.ok) throw new Error("Error al conectar con MercadoPago");
     return await response.json();
   },
 
