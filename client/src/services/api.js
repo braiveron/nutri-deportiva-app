@@ -1,8 +1,8 @@
 // 👇 1. IMPORTANTE: Importamos el cliente de Supabase aquí
 import { supabase } from "../supabase";
 
-// 👇 CAMBIO CLAVE: Usamos la variable de entorno de Vite o el localhost por defecto
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const API_URL = BASE_URL.endsWith("/") ? BASE_URL.slice(0, -1) : BASE_URL;
 
 // 👇 Función auxiliar para obtener la fecha local "YYYY-MM-DD"
 const getLocalDate = () => {
