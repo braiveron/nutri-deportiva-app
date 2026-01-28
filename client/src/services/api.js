@@ -190,3 +190,5 @@ export const api = {
     return await response.json();
   },
 };
+console.log("DEBUG - API URL:", import.meta.env.VITE_API_URL);
+console.log("DEBUG - SUPABASE URL:", import.meta.env.VITE_SUPABASE_URL);
