@@ -3,7 +3,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { useAppLogic } from "./hooks/useAppLogic"; 
 
 // Componentes
-import Navbar from "./components/NavBar";
+import Navbar from "./components/Navbar";
 import Auth from "./components/Auth";
 import StatusModal from "./components/StatusModal"; 
 import AccountSettingsModal from "./components/AccountSettingsModal";
