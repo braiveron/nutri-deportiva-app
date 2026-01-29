@@ -1,14 +1,19 @@
 import { supabase } from "../supabase";
 
-// 1. LÓGICA DE URL INTELIGENTE
-// Detecta si estamos en producción (Vercel) o desarrollo (Localhost)
-const API_URL =
-  import.meta.env.MODE === "production"
-    ? "https://nutri-app-t8j9.onrender.com/api"
-    : "http://localhost:5000/api";
+// 🔥 LÓGICA INFALIBLE DE URL
+// Detectamos directamente qué dice la barra de direcciones del navegador
+const isLocal =
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1";
 
-// Log para confirmar la conexión en la consola (F12)
-console.log("🌐 API activa en:", API_URL);
+const API_URL = isLocal
+  ? "http://localhost:5000/api"
+  : "https://nutri-app-t8j9.onrender.com/api";
+
+console.log("🌍 Entorno detectado:", isLocal ? "LOCAL" : "PRODUCCIÓN");
+console.log("🔗 Conectando API a:", API_URL);
+
+// ... (Resto del código IGUAL que antes, solo asegúrate de no borrar las funciones)
 
 const getLocalDate = () => {
   const date = new Date();
@@ -132,8 +137,6 @@ export const api = {
   // --- GESTIÓN DE CUENTA ---
   updateUserProfile: async (userId, { nombre, apellido }) => {
     const fullName = `${nombre} ${apellido}`.trim();
-
-    // 1. Actualizamos la tabla de base de datos
     const { error: dbError } = await supabase
       .from("profiles")
       .update({ nombre, apellido, updated_at: new Date() })
@@ -141,7 +144,6 @@ export const api = {
 
     if (dbError) return { success: false, error: dbError };
 
-    // 2. Actualizamos los metadatos de la sesión
     const { error: authError } = await supabase.auth.updateUser({
       data: { full_name: fullName },
     });
@@ -155,23 +157,19 @@ export const api = {
   },
 
   deleteUserAccount: async (userId) => {
-    // 🔥 CORREGIDO: Usamos la variable API_URL en lugar de localhost fijo
     const url = `${API_URL}/user/delete/${userId}`;
     console.log("🛠️ Intentando borrar en:", url);
 
     try {
       const response = await fetch(url, {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
       });
 
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Error server: ${response.status} - ${errorText}`);
       }
-
       return await response.json();
     } catch (error) {
       console.error("❌ El error está acá:", error.message);
