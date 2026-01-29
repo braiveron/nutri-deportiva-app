@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { supabase } from '../supabase'; // Necesitamos importar supabase aquí
+import { supabase } from '../supabase';
+import { api } from '../services/api'; // 👈 IMPORTAMOS LA API CENTRALIZADA
 
 export default function RecipeChef({ macros, userId, onRecipeCreated }) {
   const [ingredientes, setIngredientes] = useState('');
   const [tipoComida, setTipoComida] = useState('');
   const [receta, setReceta] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false); // Estado para el botón de guardar
-  const [saved, setSaved] = useState(false);   // Para saber si ya se guardó
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const cocinar = async (e) => {
     e.preventDefault();
@@ -15,37 +16,35 @@ export default function RecipeChef({ macros, userId, onRecipeCreated }) {
     
     setLoading(true);
     setReceta(null);
-    setSaved(false); // Reseteamos el estado de guardado
+    setSaved(false);
 
     const objetivo = macros || { calorias: 600, proteinas: 40 };
 
+    // Construimos el objeto de datos que espera la API
+    const datosReceta = {
+        ingredientes: ingredientes.split(',').map(i => i.trim()),
+        tipoComida,
+        macrosObjetivo: objetivo,
+        userId: userId
+    };
+
     try {
-      const response = await fetch('http://localhost:5000/api/crear-receta', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ingredientes: ingredientes.split(',').map(i => i.trim()),
-          tipoComida,
-          macrosObjetivo: objetivo,
-          userId: userId
-        }),
-      });
-      
-      const data = await response.json();
+      // 🔥 CORRECCIÓN: Usamos la función de la API en lugar de fetch directo
+      const data = await api.createRecipe(datosReceta);
       
       if (data.receta) {
         setReceta(data.receta);
-        // Ya NO llamamos a onRecipeCreated() aquí, porque aún no la guardamos
+      } else {
+        throw new Error("No se recibió receta válida");
       }
     } catch (error) {
       console.error("Error en la cocina:", error);
-      alert("El Chef está ocupado (Error de conexión)");
+      alert("El Chef está ocupado. Intenta de nuevo.");
     } finally {
       setLoading(false);
     }
   };
 
-  // --- NUEVA FUNCIÓN: GUARDADO MANUAL ---
   const guardarReceta = async () => {
     if (!receta || !userId) return;
     setSaving(true);
@@ -60,9 +59,8 @@ export default function RecipeChef({ macros, userId, onRecipeCreated }) {
 
         if (error) throw error;
 
-        setSaved(true); // Cambiamos el botón a "Guardado"
+        setSaved(true);
         
-        // AHORA SÍ avisamos a la App para que actualice la lista de abajo
         if (onRecipeCreated) onRecipeCreated();
 
     } catch (error) {
@@ -143,15 +141,15 @@ export default function RecipeChef({ macros, userId, onRecipeCreated }) {
 
             {loading && (
                 <div className="text-center animate-pulse">
-                     <span className="text-6xl">🔥</span>
-                     <p className="font-display uppercase font-bold text-sportRed mt-2">Optimizando macros...</p>
+                      <span className="text-6xl">🔥</span>
+                      <p className="font-display uppercase font-bold text-sportRed mt-2">Optimizando macros...</p>
                 </div>
             )}
 
             {receta && (
                 <div className="absolute inset-0 bg-white p-6 overflow-y-auto text-left animate-fade-in flex flex-col">
                     
-                    {/* BOTÓN DE GUARDAR (NUEVO) */}
+                    {/* BOTÓN DE GUARDAR */}
                     <div className="mb-4 flex justify-end">
                         {!saved ? (
                             <button 
@@ -209,7 +207,7 @@ export default function RecipeChef({ macros, userId, onRecipeCreated }) {
                         </div>
                     </div>
 
-                    <div className="mt-6 pb-10"> {/* Padding bottom extra para scroll */}
+                    <div className="mt-6 pb-10"> 
                         <h4 className="text-sm font-bold text-gray-400 uppercase mb-3">Preparación</h4>
                         <div className="space-y-3">
                             {receta.pasos.map((paso, i) => (

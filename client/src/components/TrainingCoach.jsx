@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { api } from "../services/api"; // 👈 IMPORTAMOS LA API CENTRALIZADA
 
 export default function TrainingCoach({ plan, userId, onPlanCreated, currentGoal }) {
   const [loading, setLoading] = useState(false);
@@ -15,16 +16,12 @@ export default function TrainingCoach({ plan, userId, onPlanCreated, currentGoal
   const generarEntreno = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/crear-entreno', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+      // 🔥 CORRECCIÓN: Usamos api.createWorkout en lugar de fetch manual
+      const data = await api.createWorkout({ 
             userId, 
             objetivo: selectedGoal,
-            dias: selectedDays // 👈 Enviamos los días
-        })
+            dias: selectedDays 
       });
-      const data = await response.json();
       
       if (data.exito) {
         onPlanCreated(data.rutina);
