@@ -14,8 +14,9 @@ router.post("/suscribirse", userController.suscribirse);
 router.post("/cancelar-suscripcion", userController.cancelarSuscripcion);
 router.get("/mi-plan/:userId", userController.obtenerPlan);
 
-// 👇 CORRECCIÓN: La función está en userController y usa POST (recibe body)
-router.post("/delete-account", userController.deleteUserAccount);
+// 🔥 CORRECCIÓN CRÍTICA: Cambiamos a DELETE y unificamos la URL con el Frontend
+// Esto debe coincidir con: fetch(`${API_URL}/user/delete/${userId}`, { method: "DELETE" })
+router.delete("/user/delete/:userId", userController.deleteUserAccount);
 
 // --- RUTAS IA GENERATIVA ---
 router.post("/crear-receta", chefController.crearReceta);

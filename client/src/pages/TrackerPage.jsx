@@ -1,6 +1,6 @@
 import { useState } from "react";
 import MacroTracker from "../components/MacroTracker";
-import WeightTracker from "../components/WeightTracker"; // 👈 Importamos el nuevo componente
+import WeightTracker from "../components/WeightTracker"; 
 import PremiumLock from "../components/PremiumLock";
 
 export default function TrackerPage({ macros, userId, userRole, onUnlock }) {
@@ -35,8 +35,9 @@ export default function TrackerPage({ macros, userId, userRole, onUnlock }) {
 
   // 2. RENDERIZADO
 
-  // CASO A: Usuario NO PRO (Candado limpio)
-  if (userRole !== 'pro') {
+  // CASO A: Usuario NO PRO y NO ADMIN (Candado)
+  // 🔥 LÓGICA VIP: Solo bloqueamos si no tiene ninguno de los dos roles
+  if (userRole !== 'pro' && userRole !== 'admin') {
     return (
         <div className="flex flex-col items-center pt-10 animate-fade-in px-4 w-full">
              <h2 className="text-3xl font-display font-bold text-sportDark mb-8 italic">
@@ -47,8 +48,7 @@ export default function TrackerPage({ macros, userId, userRole, onUnlock }) {
     );
   }
 
-  // CASO B: Usuario PRO pero SIN DATOS DE MACROS
-  // (Solo mostramos error si está intentando ver la pestaña de Macros)
+  // CASO B: Usuario PRO/ADMIN pero SIN DATOS DE MACROS
   if (activeTab === 'macros' && !finalMacros) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] animate-fade-in px-4 text-center">
@@ -59,7 +59,7 @@ export default function TrackerPage({ macros, userId, userRole, onUnlock }) {
     );
   }
 
-  // CASO C: Usuario PRO con DATOS (App Funcionando)
+  // CASO C: Usuario PRO/ADMIN con DATOS (App Funcionando)
   return (
     <div className="flex flex-col items-center pt-10 pb-20 px-4 animate-fade-in w-full max-w-7xl mx-auto">
         

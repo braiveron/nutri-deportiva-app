@@ -1,14 +1,14 @@
 import { supabase } from "../supabase";
 
-// 1. Forzamos el uso de la variable. Si no existe, la app fallará con un error claro.
-const RAW_URL = import.meta.env.VITE_API_URL || "";
-const API_URL = RAW_URL.endsWith("/") ? RAW_URL.slice(0, -1) : RAW_URL;
+// 1. LÓGICA DE URL INTELIGENTE
+// Detecta si estamos en producción (Vercel) o desarrollo (Localhost)
+const API_URL =
+  import.meta.env.MODE === "production"
+    ? "https://nutri-app-t8j9.onrender.com/api"
+    : "http://localhost:5000/api";
 
-// Debug para confirmar que NO hay localhost aquí
-console.log(
-  "🌐 URL de API en uso:",
-  API_URL || "⚠️ ERROR: No se detectó URL de API",
-);
+// Log para confirmar la conexión en la consola (F12)
+console.log("🌐 API activa en:", API_URL);
 
 const getLocalDate = () => {
   const date = new Date();
@@ -18,9 +18,9 @@ const getLocalDate = () => {
 };
 
 export const api = {
+  // --- BIOMETRÍA ---
   getBiometrics: async (userId) => {
     try {
-      if (!API_URL) throw new Error("API_URL faltante");
       const response = await fetch(`${API_URL}/mi-plan/${userId}`);
       if (!response.ok) return { existe: false, datos: null };
       const res = await response.json();
@@ -33,7 +33,6 @@ export const api = {
 
   calculatePlan: async (formData) => {
     try {
-      if (!API_URL) throw new Error("API_URL faltante");
       const response = await fetch(`${API_URL}/calcular-plan`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -47,12 +46,14 @@ export const api = {
     }
   },
 
+  // --- PAGOS Y SUSCRIPCIÓN ---
   createPaymentPreference: async (userId) => {
     const response = await fetch(`${API_URL}/crear-pago`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId }),
     });
+    if (!response.ok) throw new Error("Error en MercadoPago");
     return await response.json();
   },
 
@@ -74,6 +75,7 @@ export const api = {
     return await response.json();
   },
 
+  // --- IA GENERADORA (Chef y Entrenador) ---
   createRecipe: async (userParams) => {
     const response = await fetch(`${API_URL}/crear-receta`, {
       method: "POST",
@@ -92,6 +94,7 @@ export const api = {
     return await response.json();
   },
 
+  // --- TRACKER DIARIO ---
   getDailyLogs: async (userId) => {
     const dateStr = getLocalDate();
     const response = await fetch(
@@ -126,19 +129,24 @@ export const api = {
     return await response.json();
   },
 
-  deleteUserAccount: async (userId) => {
-    const response = await fetch(`${API_URL}/user/delete/${userId}`, {
-      method: "DELETE",
-    });
-    return await response.json();
-  },
-
+  // --- GESTIÓN DE CUENTA ---
   updateUserProfile: async (userId, { nombre, apellido }) => {
-    const { error } = await supabase
+    const fullName = `${nombre} ${apellido}`.trim();
+
+    // 1. Actualizamos la tabla de base de datos
+    const { error: dbError } = await supabase
       .from("profiles")
       .update({ nombre, apellido, updated_at: new Date() })
       .eq("id", userId);
-    return { success: !error, error };
+
+    if (dbError) return { success: false, error: dbError };
+
+    // 2. Actualizamos los metadatos de la sesión
+    const { error: authError } = await supabase.auth.updateUser({
+      data: { full_name: fullName },
+    });
+
+    return { success: !authError, error: authError };
   },
 
   updateUserPassword: async (newPassword) => {
@@ -146,6 +154,32 @@ export const api = {
     return { success: !error, error };
   },
 
+  deleteUserAccount: async (userId) => {
+    // 🔥 CORREGIDO: Usamos la variable API_URL en lugar de localhost fijo
+    const url = `${API_URL}/user/delete/${userId}`;
+    console.log("🛠️ Intentando borrar en:", url);
+
+    try {
+      const response = await fetch(url, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Error server: ${response.status} - ${errorText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("❌ El error está acá:", error.message);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // --- PESO CORPORAL ---
   addWeightLog: async (userId, weight, date) => {
     const response = await fetch(`${API_URL}/weight/add`, {
       method: "POST",
@@ -160,6 +194,7 @@ export const api = {
     return await response.json();
   },
 
+  // --- SOPORTE Y ADMIN ---
   createSupportTicket: async (userId, subject, message) => {
     const response = await fetch(`${API_URL}/support/create`, {
       method: "POST",

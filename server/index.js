@@ -31,6 +31,14 @@ app.use(
   }),
 );
 
+// AGREGAR ESTO PARA RASTREAR PETICIONES
+app.use((req, res, next) => {
+  console.log(
+    `[${new Date().toLocaleString()}] 📡 Petición recibida: ${req.method} ${req.url}`,
+  );
+  next();
+});
+
 app.use(express.json());
 
 // Ruta Base

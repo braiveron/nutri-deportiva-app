@@ -8,6 +8,7 @@ import Auth from "./components/Auth";
 import StatusModal from "./components/StatusModal"; 
 import AccountSettingsModal from "./components/AccountSettingsModal";
 import SupportModal from "./components/SupportModal";
+import Footer from "./components/Footer"; // 👈 IMPORTADO
 
 // Páginas
 import PerfilPage from "./pages/PerfilPage";
@@ -41,13 +42,14 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showSupport, setShowSupport] = useState(false); 
 
-  // --- RENDERIZADO ---
+  // --- RENDERIZADO DE CARGA ---
 
   if (checkingBiometrics) {
      return (
+        // VOLVEMOS AL FONDO BLANCO ORIGINAL
         <div className="min-h-screen flex flex-col items-center justify-center bg-white">
             <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-sportRed mb-4"></div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest animate-pulse">Cargando...</p>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest animate-pulse">Cargando Sistema...</p>
         </div>
      );
   }
@@ -56,41 +58,31 @@ function App() {
     return <Auth />;
   }
 
-  // Lógica para UX: Nombre y Estado del Perfil
+  // Lógica de Usuario
   const fullName = session.user.user_metadata.full_name || "Usuario";
-  const firstName = fullName.split(' ')[0]; // Usamos solo el primer nombre para la bienvenida
-  
-  // 👉 Detectamos si ya completó el formulario inicial (si tiene peso registrado)
+  const firstName = fullName.split(' ')[0]; 
   const hasBiometrics = initialCalcData && initialCalcData.peso > 0;
 
   return (
-    <div className="min-h-screen relative bg-gray-50 text-gray-800 font-sans overflow-hidden selection:bg-sportRed selection:text-white">
+    // RESTAURADO: bg-gray-50 y text-gray-800
+    // MANTENIDO: flex flex-col (para el footer)
+    <div className="min-h-screen relative bg-gray-50 text-gray-800 font-sans overflow-x-hidden selection:bg-sportRed selection:text-white flex flex-col">
       
-      {/* BACKGROUND */}
+      {/* BACKGROUND ORIGINAL (PUNTOS GRISES) */}
       <div 
-        className="absolute inset-0 z-0 pointer-events-none opacity-40" 
+        className="fixed inset-0 z-0 pointer-events-none opacity-40" 
         style={{
              backgroundImage: 'radial-gradient(#94a3b8 1px, transparent 1px)',
              backgroundSize: '24px 24px'
         }}
       ></div>
+
+      {/* GLOW ORIGINAL */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-sportRed/10 rounded-full blur-3xl -z-10 animate-pulse"></div>
 
-      {/* MODAL GLOBAL (Pagos/Alertas) */}
-      {paymentModal.show && (
-        <StatusModal 
-            type={paymentModal.type} 
-            title={paymentModal.title} 
-            message={paymentModal.message} 
-            onClose={closePaymentModal} 
-            onConfirm={paymentModal.onConfirm}
-        />
-      )}
-
-      <div className="relative z-10">
+      {/* CONTENEDOR PRINCIPAL FLEXIBLE */}
+      <div className="relative z-10 flex-1 flex flex-col">
         
-        {/* NAVBAR */}
-        {/* Nota: Podrías ocultar el Navbar en /bienvenida si quisieras usando useLocation */}
         <Navbar 
           onLogout={handleLogout} 
           userRole={userRole} 
@@ -105,24 +97,27 @@ function App() {
           onOpenSupport={() => setShowSupport(true)} 
         />
 
-        <div className="pb-10">
+        {/* MODAL GLOBAL (Pagos/Alertas) */}
+        {paymentModal.show && (
+          <StatusModal 
+              type={paymentModal.type} 
+              title={paymentModal.title} 
+              message={paymentModal.message} 
+              onClose={closePaymentModal} 
+              onConfirm={paymentModal.onConfirm}
+          />
+        )}
+
+        <main className="pb-10 flex-1"> {/* flex-1 para empujar el footer */}
           <Routes>
-            
-            {/* 👇 REDIRECCIÓN INTELIGENTE 👇 */}
-            {/* Si entra a la raíz: Si tiene datos -> Perfil. Si no -> Bienvenida */}
             <Route 
                 path="/" 
                 element={<Navigate to={hasBiometrics ? "/perfil" : "/bienvenida"} replace />} 
             />
 
-            {/* 👇 NUEVA RUTA DE BIENVENIDA 👇 */}
             <Route 
                 path="/bienvenida" 
-                element={
-                   
-                        <WelcomePage userName={firstName} /> 
-                   
-                } 
+                element={<WelcomePage userName={firstName} />} 
             />
             
             <Route path="/perfil" element={
@@ -166,10 +161,14 @@ function App() {
                 <AdminPage userRole={userRole} />
             } />
           </Routes>
-        </div>
+        </main>
+
+        {/* FOOTER */}
+        <Footer />
+        
       </div>
 
-      {/* MODAL DE CONFIGURACIÓN DE CUENTA */}
+      {/* MODALES DE INTERFAZ */}
       {showSettings && (
         <AccountSettingsModal 
             userId={session.user.id}
@@ -178,6 +177,7 @@ function App() {
             onUpdateSuccess={() => window.location.reload()}
         />
       )}
+      
       {showSupport && (
         <SupportModal 
             userId={session.user.id}

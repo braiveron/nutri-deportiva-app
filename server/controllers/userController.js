@@ -185,14 +185,20 @@ exports.resolveTicket = async (req, res) => {
   }
 };
 
+// server/controllers/userController.js
+
 exports.deleteUserAccount = async (req, res) => {
-  const { userId } = req.body;
+  const { userId } = req.params;
   try {
-    const { error: authError } = await supabase.auth.admin.deleteUser(userId);
-    if (authError) throw authError;
-    await supabase.from("profiles").delete().eq("id", userId);
-    res.json({ success: true, message: "Cuenta eliminada." });
+    // 🔥 USAMOS LA FUNCIÓN DE ADMIN PARA BORRAR LA CUENTA DE AUTH
+    // Esto borra el login Y el perfil automáticamente (si está bien configurado el cascade)
+    const { data, error } = await supabase.auth.admin.deleteUser(userId);
+
+    if (error) throw error;
+
+    res.json({ success: true, message: "Cuenta de Auth y Perfil eliminados" });
   } catch (error) {
+    console.error("Error eliminando cuenta:", error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 };

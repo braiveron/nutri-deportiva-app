@@ -8,7 +8,7 @@ export function useAppLogic() {
   
   // Estados de Datos
   const [userMacros, setUserMacros] = useState(null);
-  const [userRole, setUserRole] = useState(null); // 'free', 'pro', 'admin'
+  const [userRole, setUserRole] = useState(null); 
   const [initialCalcData, setInitialCalcData] = useState(null);
   
   // Estados de Suscripción
@@ -28,29 +28,28 @@ export function useAppLogic() {
   const location = useLocation(); 
 
   // --- FUNCIONES INTERNAS ---
-// En useAppLogic.jsx, cambia la función loadBiometrics por esta:
-const loadBiometrics = async (userId) => {
-  try {
-    const res = await api.getBiometrics(userId);
-    // Usamos encadenamiento opcional (?.) para evitar errores si algo falta
-    if (res?.existe && res?.datos?.target_macros) {
-        const macros = res.datos.target_macros;
-        if (macros.todos_los_planes) {
-            const objetivo = res.datos.goal || 'mantener';
-            setUserMacros(macros.todos_los_planes[objetivo]);
-        } else {
-            setUserMacros(macros);
-        }
-        setInitialCalcData(res.datos);
+
+  const loadBiometrics = async (userId) => {
+    try {
+      const res = await api.getBiometrics(userId);
+      if (res?.existe && res?.datos?.target_macros) {
+          const macros = res.datos.target_macros;
+          if (macros.todos_los_planes) {
+              const objetivo = res.datos.goal || 'mantener';
+              setUserMacros(macros.todos_los_planes[objetivo]);
+          } else {
+              setUserMacros(macros);
+          }
+          setInitialCalcData(res.datos);
+      }
+    } catch (error) {
+      console.error("Error cargando biometría:", error);
     }
-  } catch (error) {
-    console.error("Error cargando biometría:", error);
-  }
-};
+  };
+
   const fetchUserProfile = async (userId) => {
     setLoadingRole(true);
     try {
-      // 👇 CAMBIO 1: Agregamos 'role' a la consulta
       const { data, error } = await supabase
         .from('profiles')
         .select('subscription_tier, subscription_end_date, auto_renew, role')
@@ -63,20 +62,15 @@ const loadBiometrics = async (userId) => {
         setSubEndDate(data.subscription_end_date);
         setAutoRenew(data.auto_renew);
         
-        // 👇 CAMBIO 2: Lógica de Prioridad de Roles
-        // 1. Si es ADMIN en la base de datos, es Admin (ignora fechas de pago)
         if (data.role === 'admin') {
             setUserRole('admin');
         } else {
-            // 2. Si no es admin, chequeamos si es PRO o FREE según fechas
             const hoy = new Date();
             const vencimiento = data.subscription_end_date ? new Date(data.subscription_end_date) : null;
             
             if (vencimiento && vencimiento < hoy) {
-                // Si ya venció, vuelve a ser FREE
                 setUserRole('free');
             } else {
-                // Si no ha vencido, mantiene su tier (ej: 'pro')
                 setUserRole(data.subscription_tier || 'free');
             }
         }
@@ -112,79 +106,52 @@ const loadBiometrics = async (userId) => {
        Promise.all([fetchUserProfile(session.user.id), loadBiometrics(session.user.id)])
          .finally(() => setCheckingBiometrics(false));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.user?.id]);
+  },    // eslint-disable-next-line react-hooks/exhaustive-deps
+ [session?.user?.id]);
 
 
-  // 👇 DETECCIÓN DE PAGO CON "CANDADO"
+  // DETECCIÓN DE PAGO
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const status = params.get("collection_status");
-    
     const yaProcesado = sessionStorage.getItem("payment_has_been_processed");
 
     if (status && session?.user?.id) {
-        
         window.history.replaceState({}, document.title, location.pathname);
 
-        if (yaProcesado === "true") {
-            console.log("🛑 Pago ya procesado anteriormente. Omitiendo modal.");
-            return; 
-        }
+        if (yaProcesado === "true") return; 
 
         if (status === "approved") {
             sessionStorage.setItem("payment_has_been_processed", "true");
 
             const processPayment = async () => {
-                console.log("⚡ Procesando pago...");
-                
                 try {
                     const response = await api.subscribeUser(session.user.id);
-    
                     if (response.success) {
                         setUserRole("pro");
                         setAutoRenew(true);
-                        
                         const updatedProfile = await fetchUserProfile(session.user.id);
                         
                         let modalTitle = '¡Bienvenido a PRO!';
                         let modalMsg = 'Tu pago se procesó correctamente.';
                         
                         if (updatedProfile?.subscription_end_date) {
-                            const hoy = new Date();
                             const vencimiento = new Date(updatedProfile.subscription_end_date);
-                            const diffTime = Math.abs(vencimiento - hoy);
-                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
                             const fechaTexto = vencimiento.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
-    
-                            if (diffDays < 28) {
-                                modalTitle = '¡Membresía Reactivada!';
-                                modalMsg = `La renovación automática está lista. Tu próximo cobro será el ${fechaTexto} (mantienes tu fecha de corte original).`;
-                            } else {
-                                modalTitle = '¡Bienvenido al Equipo!';
-                                modalMsg = `Tu suscripción está activa. Tienes acceso cubierto hasta el ${fechaTexto}.`;
-                            }
+                            modalMsg = `Tu suscripción está activa hasta el ${fechaTexto}.`;
                         }
     
                         setPaymentModal({
-                            show: true,
-                            type: 'success',
-                            title: modalTitle,
-                            message: modalMsg,
-                            onConfirm: null
+                            show: true, type: 'success', title: modalTitle, message: modalMsg, onConfirm: null
                         });
                     }
                 } catch (err) {
                     console.error(err);
                     sessionStorage.removeItem("payment_has_been_processed");
-                    setPaymentModal({ show: true, type: 'error', title: 'Error', message: 'Hubo un problema, contáctanos.', onConfirm: null });
+                    setPaymentModal({ show: true, type: 'error', title: 'Error', message: 'Hubo un problema.', onConfirm: null });
                 }
             };
-    
             processPayment();
-
-        } else if (status === "failure") {
-             setPaymentModal({ show: true, type: 'error', title: 'Pago Rechazado', message: 'No se pudo procesar el pago.', onConfirm: null });
         }
     }
   }, [location, session]);
@@ -198,115 +165,80 @@ const loadBiometrics = async (userId) => {
 
   const handleSimulateUpgrade = async () => {
     if (!session) return;
-    
-    const isReactivation = userRole === 'pro';
-    localStorage.setItem("payment_intent", isReactivation ? "reactivation" : "new");
-    
-    sessionStorage.removeItem("payment_has_been_processed"); 
-
     try {
         const data = await api.createPaymentPreference(session.user.id);
-        if (data.init_point) {
-            window.location.href = data.init_point;
-        } else {
-            setPaymentModal({ show: true, type: 'error', title: 'Error', message: 'No se pudo iniciar el pago.', onConfirm: null });
-        }
+        if (data.init_point) window.location.href = data.init_point;
     } catch {
-        setPaymentModal({ show: true, type: 'error', title: 'Error de Conexión', message: 'Verifica tu internet.', onConfirm: null });
+        setPaymentModal({ show: true, type: 'error', title: 'Error', message: 'Error de conexión.', onConfirm: null });
     }
   };
 
   const proceedWithCancellation = async () => {
-      setPaymentModal({
-          show: true,
-          type: 'loading',
-          title: 'Procesando...',
-          message: 'Estamos gestionando la cancelación, por favor espera un momento.',
-          onConfirm: null
-      });
-
+      setPaymentModal({ show: true, type: 'loading', title: 'Procesando...', message: 'Gestionando cancelación...', onConfirm: null });
       if (!session) return;
-
       try {
         const data = await api.cancelSubscription(session.user.id);
-        
         if (data.success) {
             setAutoRenew(false); 
-            setPaymentModal({ 
-                show: true, type: 'success', title: 'Suscripción Cancelada', 
-                message: 'Tu suscripción seguirá activa hasta el final del periodo actual. No se te volverá a cobrar.',
-                onConfirm: null 
-            });
+            setPaymentModal({ show: true, type: 'success', title: 'Cancelada', message: 'Acceso activo hasta fin de ciclo.', onConfirm: null });
             await fetchUserProfile(session.user.id);
-        } else {
-            setPaymentModal({ show: true, type: 'error', title: 'Error', message: data.error, onConfirm: null });
         }
       } catch {
         setPaymentModal({ show: true, type: 'error', title: 'Error', message: 'Error de conexión.', onConfirm: null });
     }
   };
 
-  const handleDeleteAccount = async () => {
-    if (!session) return;
-    
-    const confirm1 = window.confirm("⚠️ ¿Estás seguro de que quieres eliminar tu cuenta? Esta acción no se puede deshacer.");
-    if (!confirm1) return;
+// 🔥 CORRECCIÓN: ELIMINACIÓN DE CUENTA EN useAppLogic.js
+  const handleDeleteAccount = () => {
+    setPaymentModal({
+      show: true,
+      type: "error",
+      title: "⚠️ ¿ELIMINAR CUENTA?",
+      message: "Esta acción es irreversible. Se borrarán todos tus progresos y planes.",
+      onConfirm: async () => {
+        try {
+          // 1. Llamada a la API para borrar datos
+          const response = await api.deleteUserAccount(session.user.id);
+          
+          if (response.success || response.message) {
+            // 2. Cerramos modal PRIMERO para evitar bloqueos visuales
+            closePaymentModal();
 
-    const confirm2 = window.confirm("⛔ Se borrarán todos tus datos, recetas y progreso. ¿Confirmas la eliminación?");
-    if (!confirm2) return;
-
-    try {
-        setLoadingRole(true); 
-        
-        const res = await api.deleteUserAccount(session.user.id);
-        
-        if (res.success) {
+            // 3. Forzamos el SignOut de Supabase
             await supabase.auth.signOut();
-            navigate("/");
-            alert("Tu cuenta ha sido eliminada correctamente.");
-        } else {
-            alert("Error al eliminar: " + res.error);
+            
+            // 4. Limpieza total de almacenamiento
+            window.localStorage.clear();
+            window.sessionStorage.clear();
+            
+            // 5. Redirección forzada al login
+            window.location.replace("/"); 
+          } else {
+            throw new Error("El servidor no confirmó el borrado");
+          }
+        } catch (err) {
+          console.error("Error al eliminar cuenta:", err);
+          setPaymentModal({ 
+            show: true, 
+            type: 'error', 
+            title: 'Error Crítico', 
+            message: 'No pudimos eliminar la cuenta. Intenta cerrar sesión manualmente.', 
+            onConfirm: null 
+          });
         }
-    } catch (error) {
-        console.error(error);
-        alert("Error de conexión");
-    } finally {
-        setLoadingRole(false);
-    }
+      }
+    });
   };
 
   const handleReactivateSubscription = async () => {
-      setPaymentModal({
-          show: true,
-          type: 'loading',
-          title: 'Reactivando...',
-          message: 'Estamos restaurando tu renovación automática.',
-          onConfirm: null
-      });
-
+      setPaymentModal({ show: true, type: 'loading', title: 'Reactivando...', message: 'Restaurando renovación...', onConfirm: null });
       if (!session) return;
-
       try {
         const response = await api.subscribeUser(session.user.id);
-        
         if (response.success) {
             setAutoRenew(true);
-            
-            const updatedProfile = await fetchUserProfile(session.user.id);
-            let fechaTexto = "el próximo vencimiento";
-            
-            if (updatedProfile?.subscription_end_date) {
-                const dateObj = new Date(updatedProfile.subscription_end_date);
-                fechaTexto = dateObj.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
-            }
-
-            setPaymentModal({ 
-                show: true, type: 'success', title: '¡Membresía Reactivada!', 
-                message: `La renovación automática está activa de nuevo. Tu próximo cobro será el ${fechaTexto}.`,
-                onConfirm: null 
-            });
-        } else {
-            setPaymentModal({ show: true, type: 'error', title: 'Error', message: 'No se pudo reactivar.', onConfirm: null });
+            setPaymentModal({ show: true, type: 'success', title: '¡Reactivada!', message: `Renovación activa nuevamente.`, onConfirm: null });
+            await fetchUserProfile(session.user.id);
         }
       } catch {
         setPaymentModal({ show: true, type: 'error', title: 'Error', message: 'Error de conexión.', onConfirm: null });
@@ -316,11 +248,7 @@ const loadBiometrics = async (userId) => {
   const handleCancelSubscription = async () => {
     if (!session) return;
     setPaymentModal({
-        show: true,
-        type: 'confirm',
-        title: '¿Cancelar renovación automática?',
-        message: 'Seguirás siendo PRO hasta que termine tu mes actual, pero perderás el acceso después.',
-        onConfirm: proceedWithCancellation 
+        show: true, type: 'confirm', title: '¿Cancelar renovación?', message: 'Seguirás siendo PRO hasta fin de mes.', onConfirm: proceedWithCancellation 
     });
   };
 
@@ -334,26 +262,14 @@ const loadBiometrics = async (userId) => {
   };
 
   const closePaymentModal = () => {
-       setPaymentModal({ ...paymentModal, show: false });
+    setPaymentModal(prev => ({ ...prev, show: false }));
   };
 
   return {
-    session,
-    userMacros,
-    userRole,
-    initialCalcData,
-    autoRenew,
-    subEndDate,
-    loadingRole,
-    checkingBiometrics,
-    paymentModal,         
-    updateWorkoutPlan,
-    closePaymentModal,    
-    handleCalculationSuccess,
-    handleSimulateUpgrade, 
-    handleCancelSubscription,
-    handleReactivateSubscription,
-    handleLogout,
+    session, userMacros, userRole, initialCalcData, autoRenew, subEndDate,
+    loadingRole, checkingBiometrics, paymentModal, updateWorkoutPlan,
+    closePaymentModal, handleCalculationSuccess, handleSimulateUpgrade, 
+    handleCancelSubscription, handleReactivateSubscription, handleLogout,
     handleDeleteAccount
   };
 }

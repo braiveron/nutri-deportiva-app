@@ -1,55 +1,81 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { api } from "../services/api";
 
 export default function AccountSettingsModal({ userId, currentName, onClose, onUpdateSuccess }) {
-  
-  // 👇 AQUÍ USAMOS 'currentName' PARA RELLENAR LOS CAMPOS AUTOMÁTICAMENTE
-  // Si currentName es "Juan Perez", intenta separar nombre y apellido.
   const [nombre, setNombre] = useState(() => {
     if (!currentName) return "";
-    return currentName.split(" ")[0]; // Toma la primera palabra
+    return currentName.split(" ")[0];
   });
 
   const [apellido, setApellido] = useState(() => {
     if (!currentName) return "";
     const parts = currentName.split(" ");
-    return parts.length > 1 ? parts.slice(1).join(" ") : ""; // Toma el resto
+    return parts.length > 1 ? parts.slice(1).join(" ") : "";
   });
 
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("datos");
+  
+  // 👇 ESTADO PARA MENSAJES DE ÉXITO O ERROR
+  const [status, setStatus] = useState({ type: "", text: "" });
 
-  const handleUpdateData = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    const res = await api.updateUserProfile(userId, { nombre, apellido });
-    setLoading(false);
-
-    if (res.success) {
-      alert("✅ Datos actualizados correctamente.");
-      // Actualizamos el nombre en la App globalmente
-      if (onUpdateSuccess) onUpdateSuccess(`${nombre} ${apellido}`.trim()); 
-      onClose();
-    } else {
-      alert("Error: " + res.error.message);
+  // Limpiar mensaje después de 3 segundos
+  useEffect(() => {
+    if (status.text) {
+      const timer = setTimeout(() => setStatus({ type: "", text: "" }), 3000);
+      return () => clearTimeout(timer);
     }
-  };
+  }, [status]);
+
+ const handleUpdateData = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setStatus({ type: "", text: "" });
+
+  try {
+    const res = await api.updateUserProfile(userId, { nombre, apellido });
+    
+    if (res.success) {
+      setLoading(false); // Quitamos el estado de carga
+      // 1. Mostramos el banner verde primero
+      setStatus({ type: "success", text: "✓ Perfil actualizado correctamente" });
+      
+      // 2. IMPORTANTE: Esperamos 2 segundos antes de avisarle a App.jsx que recargue
+      setTimeout(() => {
+        if (onUpdateSuccess) {
+          // Aquí es donde se dispara el window.location.reload() que tenés en App.jsx
+          onUpdateSuccess(); 
+        }
+      }, 2000); 
+
+    } else {
+      setLoading(false);
+      const errorMsg = res.error?.message || "Error desconocido";
+      setStatus({ type: "error", text: `❌ ${errorMsg}` });
+    }
+  } catch {
+    setLoading(false);
+    setStatus({ type: "error", text: "❌ Error de conexión" });
+  }
+};
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
-    if (password.length < 6) return alert("La contraseña debe tener al menos 6 caracteres.");
+    if (password.length < 6) {
+      return setStatus({ type: "error", text: "La contraseña es muy corta (min. 6)" });
+    }
     
     setLoading(true);
     const res = await api.updateUserPassword(password);
     setLoading(false);
 
     if (res.success) {
-      alert("🔒 Contraseña cambiada con éxito.");
+      setStatus({ type: "success", text: "✓ Contraseña cambiada con éxito" });
       setPassword("");
-      onClose();
+      setTimeout(onClose, 1500);
     } else {
-      alert("Error: " + res.error.message);
+      setStatus({ type: "error", text: "Error: " + (res.error?.message || "Fallo el cambio") });
     }
   };
 
@@ -57,18 +83,22 @@ export default function AccountSettingsModal({ userId, currentName, onClose, onU
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
       <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden relative">
         
-        {/* Botón Cerrar */}
-        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800">
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 z-10">
           ✕
         </button>
 
-        {/* Encabezado */}
         <div className="bg-gray-50 p-6 border-b border-gray-100">
           <h3 className="text-xl font-display font-bold text-gray-800 italic">CONFIGURAR CUENTA</h3>
           <p className="text-xs text-gray-500 mt-1">Edita tus datos de acceso.</p>
         </div>
 
-        {/* Pestañas */}
+        {/* --- BANNER DE NOTIFICACIÓN --- */}
+        <div className={`overflow-hidden transition-all duration-300 ${status.text ? 'h-12' : 'h-0'}`}>
+            <div className={`flex items-center justify-center h-full text-xs font-bold uppercase tracking-widest ${status.type === 'success' ? 'bg-green-500 text-white' : 'bg-sportRed text-white'}`}>
+                {status.text}
+            </div>
+        </div>
+
         <div className="flex border-b border-gray-100">
             <button 
                 onClick={() => setActiveTab("datos")}
@@ -84,10 +114,7 @@ export default function AccountSettingsModal({ userId, currentName, onClose, onU
             </button>
         </div>
 
-        {/* Contenido */}
         <div className="p-6">
-            
-            {/* --- TAB DATOS --- */}
             {activeTab === "datos" && (
                 <form onSubmit={handleUpdateData} className="space-y-4">
                     <div>
@@ -112,17 +139,16 @@ export default function AccountSettingsModal({ userId, currentName, onClose, onU
                             required
                         />
                     </div>
-                    <button disabled={loading} className="w-full bg-sportDark text-white py-3 rounded-lg font-bold uppercase tracking-widest hover:bg-black transition-all mt-2">
+                    <button disabled={loading} className="w-full bg-sportDark text-white py-3 rounded-lg font-bold uppercase tracking-widest hover:bg-black transition-all mt-2 disabled:opacity-50">
                         {loading ? "Guardando..." : "Guardar Cambios"}
                     </button>
                 </form>
             )}
 
-            {/* --- TAB SEGURIDAD --- */}
             {activeTab === "seguridad" && (
                 <form onSubmit={handleChangePassword} className="space-y-4">
                     <div className="bg-yellow-50 p-3 rounded border border-yellow-100 mb-4">
-                        <p className="text-xs text-yellow-700">⚠️ Al cambiar tu contraseña, podrías tener que volver a iniciar sesión en otros dispositivos.</p>
+                        <p className="text-[10px] text-yellow-700 font-medium">⚠️ Se cerrará la sesión en otros dispositivos al cambiar la clave.</p>
                     </div>
                     <div>
                         <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Nueva Contraseña</label>
@@ -135,12 +161,11 @@ export default function AccountSettingsModal({ userId, currentName, onClose, onU
                             required
                         />
                     </div>
-                    <button disabled={loading} className="w-full bg-sportRed text-white py-3 rounded-lg font-bold uppercase tracking-widest hover:bg-red-700 transition-all mt-2 shadow-lg shadow-red-200">
+                    <button disabled={loading} className="w-full bg-sportRed text-white py-3 rounded-lg font-bold uppercase tracking-widest hover:bg-red-700 transition-all mt-2 shadow-lg shadow-red-200 disabled:opacity-50">
                         {loading ? "Actualizando..." : "Cambiar Contraseña"}
                     </button>
                 </form>
             )}
-
         </div>
       </div>
     </div>

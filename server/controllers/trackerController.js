@@ -66,7 +66,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 exports.analyzeFood = async (req, res) => {
   const { text } = req.body;
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
     const prompt = `Analiza este alimento: "${text}". Devuelve SOLO un objeto JSON (sin markdown, sin texto extra) con estimaciones de: calories, protein, carbs, fats. Ejemplo: {"calories": 200, "protein": 10, "carbs": 20, "fats": 5}. Si no es alimento, devuelve campos en 0.`;
 
     const result = await model.generateContent(prompt);

@@ -1,14 +1,26 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom"; // 1. IMPORTAMOS NAVIGATE
 import { supabase } from "../supabase";
-import { api } from "../services/api"; // 👈 IMPORTAMOS LA API PARA EL DIARIO
+import { api } from "../services/api"; 
+import StatusModal from "./StatusModal";
 
 export default function RecipeHistory({ userId }) {
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
-  
-  // Estado para el buscador
   const [searchTerm, setSearchTerm] = useState("");
+  
+  const navigate = useNavigate(); // 2. INSTANCIAMOS
+
+  // 3. AGREGAMOS 'redirect' AL ESTADO INICIAL
+  const [modal, setModal] = useState({ 
+    show: false, 
+    type: 'success', 
+    title: '', 
+    message: '', 
+    onConfirm: null,
+    redirect: null // 👈 Nueva propiedad
+  });
 
   useEffect(() => {
     if (userId) fetchRecipes();
@@ -32,11 +44,20 @@ export default function RecipeHistory({ userId }) {
     }
   };
 
-  const handleDelete = async (e, id) => {
+  const handleDeleteClick = (e, id) => {
     e.stopPropagation(); 
-    
-    const confirm = window.confirm("¿Borrar esta receta permanentemente?");
-    if (!confirm) return;
+    setModal({
+        show: true,
+        type: 'error',
+        title: '¿Borrar Receta?',
+        message: 'Esta acción no se puede deshacer. ¿Quieres eliminarla de tu libro?',
+        onConfirm: () => confirmDelete(id),
+        redirect: null
+    });
+  };
+
+  const confirmDelete = async (id) => {
+    setModal({ show: true, type: 'loading', title: 'Borrando...', message: 'Eliminando receta...', onConfirm: null });
 
     try {
       const { error } = await supabase
@@ -45,22 +66,32 @@ export default function RecipeHistory({ userId }) {
         .eq('id', id);
 
       if (error) throw error;
+      
       setRecipes(recipes.filter(r => r.id !== id));
+      
+      setModal({ show: true, type: 'success', title: '¡Eliminada!', message: 'La receta se ha borrado correctamente.', onConfirm: null, redirect: null });
 
     } catch (error) {
-      alert("Error borrando: " + error.message);
+      setModal({ show: true, type: 'error', title: 'Error', message: error.message, onConfirm: null, redirect: null });
     }
   };
 
-  // 👇 NUEVA FUNCIÓN: ENVIAR AL DIARIO
-  const handleAddToTracker = async (e, item) => {
-      e.stopPropagation(); // Evita que se abra/cierre el acordeón
+  const handleAddToTrackerClick = (e, item) => {
+      e.stopPropagation(); 
+      setModal({
+        show: true,
+        type: 'confirm',
+        title: '¿Registrar en Diario?',
+        message: `Vamos a agregar "${item.recipe_data.nombre_receta}" a tu consumo de hoy.`,
+        onConfirm: () => confirmAddToTracker(item),
+        redirect: null
+      });
+  };
 
-      const confirm = window.confirm(`¿Registrar "${item.recipe_data.nombre_receta}" en tu diario de hoy?`);
-      if (!confirm) return;
+  const confirmAddToTracker = async (item) => {
+      setModal({ show: true, type: 'loading', title: 'Registrando...', message: 'Guardando en tu diario...', onConfirm: null });
 
       const macros = item.recipe_data.macros;
-
       const logData = {
           userId,
           meal_name: item.recipe_data.nombre_receta,
@@ -73,21 +104,39 @@ export default function RecipeHistory({ userId }) {
       try {
           const res = await api.addDailyLog(logData);
           if (res.success) {
-              alert("✅ ¡Agregado! Tus macros se han actualizado.");
+              // 🔥 4. AQUÍ CONFIGURAMOS LA REDIRECCIÓN AL ÉXITO
+              setModal({ 
+                  show: true, 
+                  type: 'success', 
+                  title: '¡Registrado!', 
+                  message: 'Tus macros se han actualizado. Vamos a verlos.', 
+                  onConfirm: null,
+                  redirect: '/seguimiento' // 👈 La magia ocurre aquí
+              });
           } else {
-              alert("Error al agregar: " + res.error);
+              setModal({ show: true, type: 'error', title: 'Error', message: 'No se pudo agregar: ' + res.error, onConfirm: null });
           }
       } catch (error) {
           console.error(error);
-          alert("Error de conexión");
+          setModal({ show: true, type: 'error', title: 'Error de Red', message: 'Verifica tu conexión.', onConfirm: null });
       }
+  };
+
+  // 🔥 5. MODIFICAMOS EL CIERRE PARA EJECUTAR REDIRECCIÓN
+  const closeModal = () => {
+    const destination = modal.redirect; // Guardamos la ruta antes de limpiar el estado
+    
+    setModal({ ...modal, show: false, redirect: null }); // Limpiamos
+    
+    if (destination) {
+        navigate(destination); // 🚀 Viajamos
+    }
   };
 
   const toggleRecipe = (id) => {
     setExpandedId(expandedId === id ? null : id);
   };
 
-  // Lógica de Filtrado
   const filteredRecipes = recipes.filter((item) => {
       if (!searchTerm) return true;
       const nombre = item.recipe_data?.nombre_receta?.toLowerCase() || "";
@@ -97,8 +146,18 @@ export default function RecipeHistory({ userId }) {
   if (loading) return <div className="text-center text-gray-400 mt-10 animate-pulse">Cargando libro de cocina...</div>;
 
   return (
-    <div className="w-full max-w-4xl mt-16 animate-fade-in pb-20">
+    <div className="w-full max-w-4xl mt-16 animate-fade-in pb-20 relative">
       
+      {modal.show && (
+        <StatusModal 
+            type={modal.type}
+            title={modal.title}
+            message={modal.message}
+            onClose={closeModal}
+            onConfirm={modal.onConfirm}
+        />
+      )}
+
       {/* TÍTULO */}
       <div className="flex items-center gap-4 mb-4">
         <div className="h-px bg-gray-300 flex-1"></div>
@@ -163,9 +222,8 @@ export default function RecipeHistory({ userId }) {
 
                     <div className="flex items-center gap-3">
                         
-                        {/* 👇 BOTÓN NUEVO: AGREGAR AL DIARIO */}
                         <button 
-                            onClick={(e) => handleAddToTracker(e, item)}
+                            onClick={(e) => handleAddToTrackerClick(e, item)}
                             className="p-2 text-gray-300 hover:text-green-600 hover:bg-green-50 rounded-full transition-all"
                             title="Registrar en Diario de Hoy"
                         >
@@ -174,9 +232,8 @@ export default function RecipeHistory({ userId }) {
                             </svg>
                         </button>
 
-                        {/* BOTÓN BORRAR */}
                         <button 
-                            onClick={(e) => handleDelete(e, item.id)}
+                            onClick={(e) => handleDeleteClick(e, item.id)}
                             className="p-2 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded-full transition-all"
                             title="Borrar receta"
                         >
@@ -191,7 +248,6 @@ export default function RecipeHistory({ userId }) {
                     </div>
                 </div>
 
-                {/* CONTENIDO DESPLEGABLE */}
                 {isOpen && (
                     <div className="p-6 border-t border-gray-100 bg-gray-50 animate-fade-in">
                         <div className="grid md:grid-cols-2 gap-6">

@@ -1,11 +1,8 @@
 import TrainingCoach from "../components/TrainingCoach";
 import PremiumLock from "../components/PremiumLock";
 
-// 👇 Recibimos onUnlock
 export default function EntrenoPage({ initialData, userId, userRole, onPlanCreated, userGoal, onUnlock }) {
     
-    // 🛑 Eliminamos loadingPay y handleMercadoPago manual.
-
     if (!initialData) {
         return (
             <div className="flex flex-col items-center justify-center h-[60vh] animate-fade-in px-4 text-center">
@@ -16,12 +13,11 @@ export default function EntrenoPage({ initialData, userId, userRole, onPlanCreat
         );
     }
 
-    if (userRole !== 'pro') {
+    // 🔥 LÓGICA VIP: Si NO es pro Y TAMPOCO es admin, mostramos el candado
+    if (userRole !== 'pro' && userRole !== 'admin') {
         return (
             <div className="flex flex-col items-center pt-10 animate-fade-in px-4 w-full">
                  <h2 className="text-3xl font-display font-bold text-sportDark mb-8 italic">ENTRENAMIENTO <span className="text-sportRed">PRO</span></h2>
-                 
-                 {/* 👇 Usamos onUnlock directamente */}
                  <PremiumLock onUnlock={onUnlock} />
             </div>
         );

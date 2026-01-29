@@ -16,12 +16,13 @@ export default function CocinaPage({ macros, userId, userRole, onUnlock }) {
     );
   }
 
+  // 🔥 LÓGICA VIP: Verificamos si es PRO o ADMIN
+  const hasAccess = userRole === 'pro' || userRole === 'admin';
+
   return (
     <div className="flex flex-col items-center animate-fade-in w-full max-w-6xl mx-auto pt-10 pb-20 px-4">
-       {userRole === 'pro' ? (
+       {hasAccess ? (
          <>
-          
-
            <RecipeChef 
                macros={macros} 
                userId={userId} 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import StatusModal from './StatusModal'; // 👈 1. IMPORTAMOS EL MODAL GLOBAL
 
 export default function MacroTracker({ userId, userMacros }) {
   const [logs, setLogs] = useState([]);
@@ -9,7 +10,15 @@ export default function MacroTracker({ userId, userMacros }) {
   const [foodInput, setFoodInput] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [previewData, setPreviewData] = useState(null); 
-  const [logToDelete, setLogToDelete] = useState(null);
+
+  // 👇 2. ESTADO DEL MODAL (Reemplaza a logToDelete)
+  const [modal, setModal] = useState({ 
+    show: false, 
+    type: 'success', 
+    title: '', 
+    message: '', 
+    onConfirm: null 
+  });
 
   const loadLogs = async () => {
     try {
@@ -18,7 +27,6 @@ export default function MacroTracker({ userId, userMacros }) {
     } catch (error) {
         console.error("Error cargando logs:", error);
     } finally {
-        // Pequeño delay artificial (300ms) para evitar parpadeos instantáneos si el internet es muy rápido
         setTimeout(() => setLoading(false), 300);
     }
   };
@@ -27,6 +35,12 @@ export default function MacroTracker({ userId, userMacros }) {
     if (userId) loadLogs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, userMacros]);
+
+  // --- HANDLERS ---
+
+  const closeModal = () => {
+    setModal({ ...modal, show: false });
+  };
 
   const handleAnalyze = async (e) => {
     e.preventDefault();
@@ -38,7 +52,8 @@ export default function MacroTracker({ userId, userMacros }) {
         if (res.success) setPreviewData({ meal_name: foodInput, ...res.data });
     } catch (error) {
         console.error(error);
-        alert("Error al analizar.");
+        // 👇 Reemplazamos alert por modal
+        setModal({ show: true, type: 'error', title: 'Error', message: 'No pudimos analizar la comida. Intenta de nuevo.', onConfirm: null });
     } finally {
         setAnalyzing(false);
     }
@@ -46,6 +61,10 @@ export default function MacroTracker({ userId, userMacros }) {
 
   const handleConfirmAdd = async () => {
     if (!previewData) return;
+    
+    // Mostramos carga mientras agrega
+    setModal({ show: true, type: 'loading', title: 'Guardando...', message: 'Registrando comida...', onConfirm: null });
+
     const newLog = {
         userId,
         meal_name: previewData.meal_name,
@@ -54,32 +73,54 @@ export default function MacroTracker({ userId, userMacros }) {
         carbs: Number(previewData.carbs) || 0,
         fats: Number(previewData.fats) || 0
     };
+
     try {
         const res = await api.addDailyLog(newLog);
         if (res.success) {
             setLogs([...logs, res.log]); 
             setFoodInput("");           
             setPreviewData(null);       
+            // Cerramos modal de carga
+            setModal({ ...modal, show: false });
         }
     } catch {
-        alert("Error de conexión");
+        setModal({ show: true, type: 'error', title: 'Error', message: 'Error de conexión al guardar.', onConfirm: null });
     }
   };
 
-  const executeDelete = async () => {
-      if (!logToDelete) return;
-      const id = logToDelete;
-      setLogToDelete(null); 
+  // 👇 3. CLICK EN EL BOTÓN DE BASURA
+  const handleDeleteClick = (id) => {
+    setModal({
+        show: true,
+        type: 'error', // Tipo error para que el botón sea ROJO
+        title: '¿Borrar Comida?',
+        message: 'Se eliminará este registro de tu total diario.',
+        onConfirm: () => executeDelete(id) // Pasamos la ejecución real
+    });
+  };
+
+  const executeDelete = async (id) => {
+      // Modal de carga
+      setModal({ show: true, type: 'loading', title: 'Borrando...', message: 'Eliminando registro...', onConfirm: null });
+      
       try {
           const previousLogs = [...logs];
+          // Actualización optimista (lo borramos visualmente ya)
           setLogs(logs.filter(log => log.id !== id));
+
           const res = await api.deleteDailyLog(id);
-          if (!res.success) {
-              setLogs(previousLogs);
-              alert("No se pudo borrar");
+          
+          if (res.success) {
+             // Éxito: Cerramos modal o mostramos confirmación rápida
+             setModal({ show: true, type: 'success', title: '¡Borrado!', message: 'Registro eliminado.', onConfirm: null });
+          } else {
+             // Si falla, revertimos y mostramos error
+             setLogs(previousLogs);
+             setModal({ show: true, type: 'error', title: 'Error', message: 'No se pudo borrar.', onConfirm: null });
           }
       } catch (error) {
           console.error(error);
+          setModal({ show: true, type: 'error', title: 'Error', message: 'Error de conexión.', onConfirm: null });
       }
   };
 
@@ -94,10 +135,21 @@ export default function MacroTracker({ userId, userMacros }) {
   return (
     <div className="w-full relative">
       
+      {/* 👇 4. RENDERIZAMOS EL MODAL AQUÍ (Gracias al Portal saldrá arriba de todo) */}
+      {modal.show && (
+        <StatusModal 
+            type={modal.type}
+            title={modal.title}
+            message={modal.message}
+            onClose={closeModal}
+            onConfirm={modal.onConfirm}
+        />
+      )}
+
       {/* LAYOUT PRINCIPAL: 2 COLUMNAS */}
       <div className="flex flex-col lg:flex-row gap-8 items-start">
           
-          {/* 👈 COLUMNA IZQUIERDA (40%): ALTURA FIJA PARA EVITAR SALTOS */}
+          {/* 👈 COLUMNA IZQUIERDA (40%) */}
           <div className="w-full lg:w-[40%] bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sticky top-4 min-h-[500px] flex flex-col">
             
             <h3 className="text-xl font-display font-bold text-sportDark mb-6 flex items-center gap-2">
@@ -106,13 +158,11 @@ export default function MacroTracker({ userId, userMacros }) {
 
             {/* CONTENIDO CAMBIANTE */}
             {loading ? (
-                // LOADER CENTRALIZADO (Mantiene la caja abierta)
                 <div className="flex-1 flex flex-col items-center justify-center opacity-50">
                     <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-sportRed mb-4"></div>
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-widest animate-pulse">Calculando...</p>
                 </div>
             ) : (
-                // DATOS REALES (Aparecen con Fade In suave)
                 <div className="animate-fade-in space-y-8">
                     
                     {/* Contador */}
@@ -139,7 +189,7 @@ export default function MacroTracker({ userId, userMacros }) {
           {/* 👉 COLUMNA DERECHA (60%): INPUT Y LISTA */}
           <div className="w-full lg:w-[60%] flex flex-col gap-6">
             
-            {/* INPUT (Siempre visible, no carga) */}
+            {/* INPUT */}
             <div className="bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-inner">
                 <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">¿Qué comiste hoy?</h4>
                 {!previewData ? (
@@ -173,12 +223,11 @@ export default function MacroTracker({ userId, userMacros }) {
                 )}
             </div>
 
-            {/* LISTA DE COMIDAS (Con altura mínima para evitar saltos) */}
+            {/* LISTA DE COMIDAS */}
             <div className="min-h-[200px]">
                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 pl-2">Historial de Hoy</h4>
                  
                  {loading ? (
-                     // LOADER SIMPLE
                      <div className="flex justify-center py-10 opacity-50">
                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-400"></div>
                      </div>
@@ -201,8 +250,9 @@ export default function MacroTracker({ userId, userMacros }) {
                                         </div>
                                     </div>
                                     <button 
-                                        onClick={() => setLogToDelete(log.id)}
+                                        onClick={() => handleDeleteClick(log.id)} // 👈 USAMOS EL NUEVO HANDLER
                                         className="text-gray-300 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-all"
+                                        title="Eliminar registro"
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                                             <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
@@ -214,24 +264,10 @@ export default function MacroTracker({ userId, userMacros }) {
                      </div>
                  )}
             </div>
-
           </div>
       </div>
-
-      {/* MODAL BORRAR (Sin cambios) */}
-      {logToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm border border-gray-100">
-                <div className="text-center">
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">¿Borrar comida?</h3>
-                    <div className="flex gap-3 w-full mt-6">
-                        <button onClick={() => setLogToDelete(null)} className="flex-1 py-2 text-sm font-bold text-gray-500 hover:bg-gray-50 rounded-lg">Cancelar</button>
-                        <button onClick={executeDelete} className="flex-1 py-2 text-sm font-bold bg-sportRed text-white rounded-lg hover:bg-red-700">Sí, borrar</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-      )}
+      
+      {/* EL MODAL BLANCO VIEJO FUE ELIMINADO COMPLETAMENTE */}
 
     </div>
   );
