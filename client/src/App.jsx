@@ -8,7 +8,7 @@ import Auth from "./components/Auth";
 import StatusModal from "./components/StatusModal"; 
 import AccountSettingsModal from "./components/AccountSettingsModal";
 import SupportModal from "./components/SupportModal";
-import Footer from "./components/Footer"; // 👈 IMPORTADO
+import Footer from "./components/Footer"; 
 
 // Páginas
 import PerfilPage from "./pages/PerfilPage";
@@ -46,7 +46,6 @@ function App() {
 
   if (checkingBiometrics) {
      return (
-        // VOLVEMOS AL FONDO BLANCO ORIGINAL
         <div className="min-h-screen flex flex-col items-center justify-center bg-white">
             <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-sportRed mb-4"></div>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest animate-pulse">Cargando Sistema...</p>
@@ -64,11 +63,12 @@ function App() {
   const hasBiometrics = initialCalcData && initialCalcData.peso > 0;
 
   return (
-    // RESTAURADO: bg-gray-50 y text-gray-800
-    // MANTENIDO: flex flex-col (para el footer)
-    <div className="min-h-screen relative bg-gray-50 text-gray-800 font-sans overflow-x-hidden selection:bg-sportRed selection:text-white flex flex-col">
+    // 🧱 ESTRUCTURA MAESTRA SIMPLIFICADA
+    // min-h-screen: La app mide AL MENOS el 100% de la pantalla.
+    // flex-col: Ordena verticalmente (Navbar -> Main -> Footer).
+    <div className="min-h-screen flex flex-col relative bg-gray-50 text-gray-800 font-sans overflow-x-hidden selection:bg-sportRed selection:text-white">
       
-      {/* BACKGROUND ORIGINAL (PUNTOS GRISES) */}
+      {/* BACKGROUNDS FIJOS (No afectan el flujo) */}
       <div 
         className="fixed inset-0 z-0 pointer-events-none opacity-40" 
         style={{
@@ -77,98 +77,98 @@ function App() {
         }}
       ></div>
 
-      {/* GLOW ORIGINAL */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-sportRed/10 rounded-full blur-3xl -z-10 animate-pulse"></div>
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-sportRed/10 rounded-full blur-3xl -z-10 animate-pulse"></div>
 
-      {/* CONTENEDOR PRINCIPAL FLEXIBLE */}
-      <div className="relative z-10 flex-1 flex flex-col">
-        
-        <Navbar 
-          onLogout={handleLogout} 
-          userRole={userRole} 
-          loadingRole={loadingRole} 
-          userName={fullName}
-          autoRenew={autoRenew}
-          onCancelSub={handleCancelSubscription}
-          onSubscribe={handleSimulateUpgrade} 
-          onReactivate={handleReactivateSubscription}
-          onDeleteAccount={handleDeleteAccount}
-          onOpenSettings={() => setShowSettings(true)}
-          onOpenSupport={() => setShowSupport(true)} 
-        />
+      {/* 1. NAVBAR (Tope) */}
+      <Navbar 
+        onLogout={handleLogout} 
+        userRole={userRole} 
+        loadingRole={loadingRole} 
+        userName={fullName}
+        autoRenew={autoRenew}
+        onCancelSub={handleCancelSubscription}
+        onSubscribe={handleSimulateUpgrade} 
+        onReactivate={handleReactivateSubscription}
+        onDeleteAccount={handleDeleteAccount}
+        onOpenSettings={() => setShowSettings(true)}
+        onOpenSupport={() => setShowSupport(true)} 
+      />
 
-        {/* MODAL GLOBAL (Pagos/Alertas) */}
-        {paymentModal.show && (
-          <StatusModal 
-              type={paymentModal.type} 
-              title={paymentModal.title} 
-              message={paymentModal.message} 
-              onClose={closePaymentModal} 
-              onConfirm={paymentModal.onConfirm}
+      {/* 2. MAIN (El contenido flexible) 
+          flex-1: Ocupa todo el espacio sobrante. Esto es lo que empuja al footer abajo.
+          relative z-10: Para que esté por encima del fondo.
+      */}
+      <main className="flex-1 w-full flex flex-col relative z-10">
+        <Routes>
+          <Route 
+              path="/" 
+              element={<Navigate to={hasBiometrics ? "/perfil" : "/bienvenida"} replace />} 
           />
-        )}
 
-        <main className="pb-10 flex-1"> {/* flex-1 para empujar el footer */}
-          <Routes>
-            <Route 
-                path="/" 
-                element={<Navigate to={hasBiometrics ? "/perfil" : "/bienvenida"} replace />} 
-            />
+          <Route 
+              path="/bienvenida" 
+              element={<WelcomePage userName={firstName} />} 
+          />
+          
+          <Route path="/perfil" element={
+              <PerfilPage 
+                  initialData={initialCalcData}
+                  userId={session.user.id}
+                  onCalcSuccess={handleCalculationSuccess}
+              />
+          } />
 
-            <Route 
-                path="/bienvenida" 
-                element={<WelcomePage userName={firstName} />} 
-            />
-            
-            <Route path="/perfil" element={
-                <PerfilPage 
-                    initialData={initialCalcData}
-                    userId={session.user.id}
-                    onCalcSuccess={handleCalculationSuccess}
-                />
-            } />
+          <Route path="/cocina" element={
+              <CocinaPage 
+                  macros={userMacros} 
+                  userId={session.user.id} 
+                  userRole={userRole}
+                  onUnlock={handleSimulateUpgrade}
+              />
+          } />
 
-            <Route path="/cocina" element={
-                <CocinaPage 
-                    macros={userMacros} 
-                    userId={session.user.id} 
-                    userRole={userRole}
-                    onUnlock={handleSimulateUpgrade}
-                />
-            } />
+          <Route path="/entrenamiento" element={
+              <EntrenoPage 
+                  initialData={initialCalcData}
+                  userId={session.user.id}
+                  userRole={userRole}
+                  userGoal={initialCalcData?.goal || 'mantener'}
+                  onPlanCreated={updateWorkoutPlan}
+                  onUnlock={handleSimulateUpgrade}
+              />
+          } />
 
-            <Route path="/entrenamiento" element={
-                <EntrenoPage 
-                    initialData={initialCalcData}
-                    userId={session.user.id}
-                    userRole={userRole}
-                    userGoal={initialCalcData?.goal || 'mantener'}
-                    onPlanCreated={updateWorkoutPlan}
-                    onUnlock={handleSimulateUpgrade}
-                />
-            } />
+          <Route path="/seguimiento" element={
+              <TrackerPage 
+                  macros={userMacros || initialCalcData}
+                  userId={session.user.id}
+                  userRole={userRole}
+                  onUnlock={handleSimulateUpgrade}
+              />
+          } />
 
-            <Route path="/seguimiento" element={
-                <TrackerPage 
-                    macros={userMacros || initialCalcData}
-                    userId={session.user.id}
-                    userRole={userRole}
-                    onUnlock={handleSimulateUpgrade}
-                />
-            } />
+          <Route path="/admin" element={
+              <AdminPage userRole={userRole} />
+          } />
+        </Routes>
+      </main>
 
-            <Route path="/admin" element={
-                <AdminPage userRole={userRole} />
-            } />
-          </Routes>
-        </main>
+      {/* 3. FOOTER (Fondo) 
+          Al ser hijo directo del flex-col principal, siempre quedará al final.
+      */}
+      <Footer />
 
-        {/* FOOTER */}
-        <Footer />
-        
-      </div>
+      {/* 4. MODALES (Fuera del flujo visual) */}
+      {paymentModal.show && (
+        <StatusModal 
+            type={paymentModal.type} 
+            title={paymentModal.title} 
+            message={paymentModal.message} 
+            onClose={closePaymentModal} 
+            onConfirm={paymentModal.onConfirm}
+        />
+      )}
 
-      {/* MODALES DE INTERFAZ */}
       {showSettings && (
         <AccountSettingsModal 
             userId={session.user.id}

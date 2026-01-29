@@ -29,11 +29,8 @@ export default function CocinaPage({ macros, userId, userRole, onUnlock }) {
          </>
        ) : (
          <div className="flex flex-col items-center w-full">
-             <h2 className="text-3xl font-display font-bold text-sportDark mb-8 italic">
-                 CHEF PERSONAL <span className="text-sportRed">PRO</span>
-             </h2>
              
-             <PremiumLock onUnlock={onUnlock} />
+             <PremiumLock onUnlock={onUnlock} type="cocina"/>
          </div>
        )}
     </div>

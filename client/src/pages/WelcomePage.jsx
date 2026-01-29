@@ -3,20 +3,9 @@ import { useNavigate } from 'react-router-dom';
 
 // Reutilizamos las MISMAS imágenes de Auth.jsx para mantener la identidad visual
 const BACKGROUND_IMAGES = [
-    // 1. FUERZA: Interior de gimnasio moderno con buena iluminación (El lugar de trabajo)
-    
     "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop",
-
-    // 2. PREPARACIÓN ORDENADA (Flatlay): Ingredientes separados en bowls sobre fondo blanco/mármol.
-  // Al tener fondo blanco y estar ordenados, el texto se lee perfecto encima. Cero caos.
-  "https://images.unsplash.com/photo-1498837167922-ddd27525d352?q=80&w=2070&auto=format&fit=crop",
-    
-    // 3. PISTA DE ATLETISMO: Carriles rojos y líneas blancas. 
-    // Geometría pura. Da sensación de velocidad y deporte sin distraer.
+    "https://images.unsplash.com/photo-1498837167922-ddd27525d352?q=80&w=2070&auto=format&fit=crop",
     "https://images.unsplash.com/photo-1532444458054-01a7dd3e9fca?q=80&w=2070&auto=format&fit=crop", 
-    
-    // 4. MESA DE NUTRICIÓN (Flatlay): Una mesa llena de comida saludable vista desde arriba.
-    // Al ser cenital y tener muchos elementos, funciona como una textura de fondo perfecta.
     "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=2053&auto=format&fit=crop", 
 ];
 
@@ -67,15 +56,16 @@ export default function WelcomePage({ userName }) {
       <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-4 sm:px-6 lg:px-8">
         
         {/* LOGO GRANDE */}
-        <div className="mb-8 animate-fade-in-down">
-            <h1 className="text-6xl md:text-8xl font-black italic tracking-tighter leading-none select-none drop-shadow-2xl">
+        <div className="mb-4 md:mb-8 animate-fade-in-down">
+            {/* Ajustado texto movil a 5xl para que no se salga de pantalla, 8xl en escritorio igual que antes */}
+            <h1 className="text-5xl md:text-8xl font-black italic tracking-tighter leading-none select-none drop-shadow-2xl">
                 <span className="text-white">NUTRI</span>
                 <span className="text-sportRed">SPORT</span>
             </h1>
         </div>
 
         {/* SALUDO PERSONALIZADO */}
-        <h2 className="text-2xl md:text-5xl font-bold text-white mb-6 animate-fade-in delay-200 drop-shadow-lg">
+        <h2 className="text-2xl md:text-5xl font-bold text-white mb-6 animate-fade-in delay-200 drop-shadow-lg leading-tight">
           Bienvenido al equipo, <br className="md:hidden"/> 
           <span className="text-sportRed inline-block ml-2 decoration-sportRed/30 underline-offset-8">
             {userName}
@@ -83,27 +73,36 @@ export default function WelcomePage({ userName }) {
         </h2>
 
         {/* EXPLICACIÓN BREVE */}
-        <p className="text-lg md:text-1xl text-gray-200 max-w-3xl mx-auto mb-12 leading-relaxed animate-fade-in delay-300 font-medium drop-shadow-md">
-          Estás a un paso de tu mejor versión. < br /> Para que comenzar la experiencia y crear tu <span className="text-white font-black">Plan de Nutrición y Entrenamiento</span> 100% personalizado, necesitamos conocer tus medidas y objetivos actuales.
+        <p className="text-sm md:text-xl text-gray-200 max-w-3xl mx-auto mb-8 md:mb-12 leading-relaxed animate-fade-in delay-300 font-medium drop-shadow-md">
+          Estás a un paso de tu mejor versión. <br className="hidden md:block" /> 
+          Para que comenzar la experiencia y crear tu <span className="text-white font-black">Plan de Nutrición y Entrenamiento</span> 100% personalizado, necesitamos conocer tus medidas y objetivos actuales.
         </p>
 
         {/* BOTÓN CTA PRINCIPAL */}
-        <div className="animate-slide-up delay-500">
+        <div className="animate-slide-up delay-500 w-full md:w-auto">
             <button
             onClick={() => navigate('/perfil')}
-            className="group relative inline-flex items-center justify-center px-12 py-4 text-xl font-display font-bold text-white uppercase tracking-widest bg-sportRed hover:bg-red-600 rounded-sm shadow-2xl transition-all duration-300 ease-out hover:scale-105 overflow-hidden"
+            className="
+                group relative inline-flex items-center justify-center 
+                w-full md:w-auto                 /* Móvil: Full width | PC: Auto */
+                px-6 py-3 md:px-12 md:py-4       /* Móvil: Padding chico | PC: Grande */
+                text-base md:text-xl             /* Móvil: Texto medio | PC: Grande */
+                font-display font-bold text-white uppercase tracking-widest 
+                bg-sportRed hover:bg-red-600 rounded-sm shadow-2xl 
+                transition-all duration-300 ease-out hover:scale-105 overflow-hidden
+            "
             >
             {/* Efecto de brillo al pasar el mouse */}
             <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out"></span>
             
             <span>Comenzar mi Transformación</span>
             {/* Flecha animada */}
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 ml-3 group-hover:translate-x-2 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 md:h-6 md:w-6 ml-3 group-hover:translate-x-2 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
             </svg>
             </button>
 
-            <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-6 animate-pulse">
+            <p className="text-gray-400 text-[10px] md:text-xs font-bold uppercase tracking-widest mt-4 md:mt-6 animate-pulse">
                 Solo te tomará 60 segundos
             </p>
         </div>

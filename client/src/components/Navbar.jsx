@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"; //
+import { useState, useEffect, useRef } from "react"; 
 import { Link, useLocation } from "react-router-dom";
 
 export default function Navbar({ 
@@ -40,39 +40,48 @@ export default function Navbar({
     };
   }, [menuOpen]);
 
+  // Estilo para links del Navbar Desktop
   const isActive = (path) => location.pathname === path 
     ? "text-sportRed font-bold border-b-2 border-sportRed pb-1" 
     : "text-gray-400 hover:text-white transition-colors pb-1 border-b-2 border-transparent hover:border-gray-700";
+
+  // Estilo para links del Menú Móvil (Dentro del dropdown)
+  const mobileLinkStyle = (path) => `
+    block w-full text-left px-4 py-3 text-xs font-black uppercase tracking-widest transition-colors border-l-2
+    ${location.pathname === path 
+        ? "text-sportRed bg-black/20 border-sportRed" 
+        : "text-gray-400 hover:text-white hover:bg-gray-800 border-transparent"}
+  `;
 
   return (
     <nav className={`sticky top-0 z-50 transition-all duration-500 border-b ${
       isWelcomePage 
         ? "bg-gray-900/10 backdrop-blur-md border-gray-800 shadow-lg" // Estilo para fondo oscuro
         : "bg-gray-900 border-gray-700 shadow-2xl" // Estilo sólido para páginas blancas
-    } px-6 py-4`}>
+    } px-4 py-3 md:px-6 md:py-4`}> {/* Padding reducido en movil */}
+      
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         
         {/* LOGO */}
         <div className="flex items-center gap-2">
           <Link to="/bienvenida" className="flex items-center group">
-            <h1 className="text-2xl font-black italic tracking-tighter leading-none select-none transition-transform group-hover:scale-105">
+            <h1 className="text-xl md:text-2xl font-black italic tracking-tighter leading-none select-none transition-transform group-hover:scale-105">
                 <span className="text-white">NUTRI</span>
                 <span className="text-sportRed">SPORT</span>
             </h1>
           </Link>
         </div>
 
-        {/* MENU DESKTOP */}
+        {/* MENU DESKTOP (Oculto en móvil) */}
         <div className="hidden md:flex items-center gap-8 text-sm uppercase tracking-widest font-medium">
             <Link to="/perfil" className={isActive('/perfil')}>Perfil</Link>
             <Link to="/cocina" className={isActive('/cocina')}>Cocina</Link>
             <Link to="/entrenamiento" className={isActive('/entrenamiento')}>Entrenamıento</Link>
-            <Link to="/seguimiento" className={isActive('/seguimiento')}>Seguımıento
-        </Link>
+            <Link to="/seguimiento" className={isActive('/seguimiento')}>Seguımıento</Link>
         </div>
 
         {/* USUARIO / DROPDOWN */}
-        <div className="relative" ref={menuRef}> {/* Agregamos el ref aquí */}
+        <div className="relative" ref={menuRef}> 
             <button 
                 onClick={() => setMenuOpen(!menuOpen)}
                 className="flex items-center gap-3 hover:opacity-80 transition-opacity group"
@@ -84,7 +93,7 @@ export default function Navbar({
                     </div>
                 </div>
                 
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shadow-lg ring-2 ring-transparent group-hover:ring-sportRed transition-all ${
+                <div className={`w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center text-white font-bold shadow-lg ring-2 ring-transparent group-hover:ring-sportRed transition-all ${
                     userRole === 'pro' ? 'bg-gradient-to-tr from-sportRed to-red-600' : 
                     userRole === 'admin' ? 'bg-black border border-sportRed' : 'bg-gray-700' 
                 }`}>
@@ -96,6 +105,15 @@ export default function Navbar({
             {menuOpen && (
                 <div className="absolute right-0 mt-4 w-64 bg-gray-900 rounded-xl shadow-2xl border border-gray-800 overflow-hidden animate-fade-in py-2 z-50">
                     
+                    {/* 👇 SECCIÓN MÓVIL: NAVEGACIÓN (Solo visible en Mobile md:hidden) */}
+                    <div className="md:hidden border-b border-gray-800 pb-2 mb-2">
+                        <p className="px-4 py-2 text-[9px] font-black text-gray-600 uppercase tracking-[0.2em]">Navegación</p>
+                        <Link to="/perfil" onClick={() => setMenuOpen(false)} className={mobileLinkStyle('/perfil')}>Perfil</Link>
+                        <Link to="/cocina" onClick={() => setMenuOpen(false)} className={mobileLinkStyle('/cocina')}>Cocina</Link>
+                        <Link to="/entrenamiento" onClick={() => setMenuOpen(false)} className={mobileLinkStyle('/entrenamiento')}>Entrenamiento</Link>
+                        <Link to="/seguimiento" onClick={() => setMenuOpen(false)} className={mobileLinkStyle('/seguimiento')}>Seguimiento</Link>
+                    </div>
+
                     {userRole === 'admin' && (
                         <>
                             <Link 
