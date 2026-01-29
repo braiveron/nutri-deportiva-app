@@ -1,4 +1,4 @@
-// paymentController.js - MODO SIMULACIÓN (DEV)
+// paymentController.js - MODO SIMULACIÓN (CORREGIDO)
 
 const createPreference = async (req, res) => {
   const { userId } = req.body;
@@ -6,11 +6,20 @@ const createPreference = async (req, res) => {
   console.log(`⚡ SIMULANDO PAGO PARA USUARIO: ${userId}`);
 
   try {
-    // En lugar de llamar a una API real, construimos la URL de "Éxito" directamente.
-    // Esto simula lo que haría MercadoPago/Ualá al terminar de cobrar.
+    // 👇 1. LÓGICA DE URL INTELIGENTE
+    // Si estamos en Producción (Render), usamos Vercel.
+    // Si estamos en Desarrollo (Tu PC), usamos Localhost.
 
-    // 👇 Esta URL hace que tu Frontend crea que el pago fue "approved"
-    const successUrl = `http://localhost:5173/perfil?collection_status=approved&external_reference=${userId}&payment_type=simulated`;
+    // NOTA: Asegúrate de que esta URL sea EXACTAMENTE la de tu Vercel
+    const CLIENT_URL =
+      process.env.NODE_ENV === "production"
+        ? "https://nutri-deportiva-app.vercel.app" // ⚠️ CONFIRMA QUE ESTE SEA TU LINK
+        : "http://localhost:5173";
+
+    // 👇 2. CONSTRUIMOS LA URL USANDO LA VARIABLE
+    const successUrl = `${CLIENT_URL}/perfil?collection_status=approved&external_reference=${userId}&payment_type=simulated`;
+
+    console.log(`↪️ Redirigiendo cliente a: ${CLIENT_URL}`);
 
     // Retardamos 1 segundo para que se sienta "real" el loading del botón
     setTimeout(() => {
