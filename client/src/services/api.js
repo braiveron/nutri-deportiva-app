@@ -1,7 +1,8 @@
 import { supabase } from "../supabase";
 
-// 🔥 LÓGICA INFALIBLE DE URL
-// Detectamos directamente qué dice la barra de direcciones del navegador
+// 🌐 LÓGICA DE DETECCIÓN DE ENTORNO
+// Si la barra de direcciones dice "localhost" o "127.0.0.1", estamos en TU PC.
+// En cualquier otro caso (Vercel, celular, la compu de tu amiga), estamos en PRODUCCIÓN.
 const isLocal =
   window.location.hostname === "localhost" ||
   window.location.hostname === "127.0.0.1";
@@ -10,11 +11,13 @@ const API_URL = isLocal
   ? "http://localhost:5000/api"
   : "https://nutri-app-t8j9.onrender.com/api";
 
-console.log("🌍 Entorno detectado:", isLocal ? "LOCAL" : "PRODUCCIÓN");
-console.log("🔗 Conectando API a:", API_URL);
+console.log(
+  "🌍 Entorno:",
+  isLocal ? "LOCAL (Tu PC)" : "PRODUCCIÓN (Vercel/Render)",
+);
+console.log("🔗 Conectando a:", API_URL);
 
-// ... (Resto del código IGUAL que antes, solo asegúrate de no borrar las funciones)
-
+// Función auxiliar para fechas
 const getLocalDate = () => {
   const date = new Date();
   const offset = date.getTimezoneOffset();
@@ -137,6 +140,8 @@ export const api = {
   // --- GESTIÓN DE CUENTA ---
   updateUserProfile: async (userId, { nombre, apellido }) => {
     const fullName = `${nombre} ${apellido}`.trim();
+
+    // 1. Actualizamos DB
     const { error: dbError } = await supabase
       .from("profiles")
       .update({ nombre, apellido, updated_at: new Date() })
@@ -144,6 +149,7 @@ export const api = {
 
     if (dbError) return { success: false, error: dbError };
 
+    // 2. Actualizamos Auth (metadata)
     const { error: authError } = await supabase.auth.updateUser({
       data: { full_name: fullName },
     });
@@ -170,6 +176,7 @@ export const api = {
         const errorText = await response.text();
         throw new Error(`Error server: ${response.status} - ${errorText}`);
       }
+
       return await response.json();
     } catch (error) {
       console.error("❌ El error está acá:", error.message);
