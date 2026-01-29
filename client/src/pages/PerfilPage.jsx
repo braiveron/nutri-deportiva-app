@@ -2,12 +2,14 @@ import Calculator from "../components/Calculator";
 
 export default function PerfilPage({ initialData, onCalcSuccess, userId }) {
   return (
-    // 👇 CAMBIO CLAVE: h-[calc(100vh-100px)] fuerza a ocupar solo el espacio visible (restando navbar)
-    // flex-col justify-center items-center: centra todo el contenido vertical y horizontalmente
-    <div className="flex flex-col justify-center items-center h-[calc(100vh-100px)] animate-fade-in w-full">
+    // 👇 SOLUCIÓN:
+    // 1. Quitamos la altura fija (h-screen...) para eliminar el doble scroll.
+    // 2. Usamos 'pt-10' para bajarlo un poco del navbar y que no quede pegado.
+    // 3. 'w-full' asegura el ancho, el footer se encargará de estar abajo solo.
+    <div className="flex flex-col items-center pt-10 pb-20 animate-fade-in w-full">
       
-      {/* TÍTULO MÁS COMPACTO Y PEGADO */}
-      <div className="text-center mb-4">
+      {/* TÍTULO */}
+      <div className="text-center mb-8">
           <h2 className="text-3xl font-display font-bold text-sportDark italic">
             TU <span className="text-sportRed">OBJETIVO</span>
           </h2>
