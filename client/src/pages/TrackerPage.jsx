@@ -2,12 +2,11 @@ import { useState } from "react";
 import MacroTracker from "../components/MacroTracker";
 import WeightTracker from "../components/WeightTracker"; 
 import PremiumLock from "../components/PremiumLock";
+import ProfileIncomplete from "../components/ProfileIncomplete"; // 👈 IMPORTAR
 
 export default function TrackerPage({ macros, userId, userRole, onUnlock }) {
-  // Estado para el Toggle: 'macros' o 'weight'
   const [activeTab, setActiveTab] = useState('macros');
 
-  // 1. NORMALIZACIÓN DE DATOS
   const detectarMacrosReales = (data) => {
       if (!data) return null;
       if (data.calorias_diarias || (data.macros && data.macros.proteinas)) {
@@ -33,10 +32,13 @@ export default function TrackerPage({ macros, userId, userRole, onUnlock }) {
 
   const finalMacros = detectarMacrosReales(macros);
 
-  // 2. RENDERIZADO
+  // 1️⃣ PRIMERO: VALIDACIÓN DE DATOS (CRÍTICO: ESTO VA ANTES QUE EL CANDADO)
+  // Si intenta ver "Diario" pero no tiene macros calculados -> Perfil Incompleto
+  if (activeTab === 'macros' && !finalMacros) {
+      return <ProfileIncomplete type="tracker"/>;
+  }
 
-  // CASO A: Usuario NO PRO y NO ADMIN (Candado)
-  // 🔥 LÓGICA VIP: Solo bloqueamos si no tiene ninguno de los dos roles
+  // 2️⃣ SEGUNDO: VALIDACIÓN DE ROL
   if (userRole !== 'pro' && userRole !== 'admin') {
     return (
         <div className="flex flex-col items-center pt-10 animate-fade-in px-4 w-full">
@@ -48,25 +50,13 @@ export default function TrackerPage({ macros, userId, userRole, onUnlock }) {
     );
   }
 
-  // CASO B: Usuario PRO/ADMIN pero SIN DATOS DE MACROS
-  if (activeTab === 'macros' && !finalMacros) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh] animate-fade-in px-4 text-center">
-        <span className="text-6xl mb-4">⚠️</span>
-        <h3 className="text-2xl font-bold text-gray-400 uppercase tracking-widest">Sin Datos</h3>
-        <p className="text-gray-500 mt-2">Configura tu perfil para activar el diario.</p>
-      </div>
-    );
-  }
-
-  // CASO C: Usuario PRO/ADMIN con DATOS (App Funcionando)
+  // 3️⃣ TERCERO: CONTENIDO
   return (
     <div className="flex flex-col items-center pt-10 pb-20 px-4 animate-fade-in w-full max-w-7xl mx-auto">
         
         {/* INTERRUPTOR (TOGGLE) */}
         <div className="mb-8">
             <div className="flex bg-gray-200 p-1 rounded-full relative">
-                {/* Fondo blanco animado */}
                 <div 
                     className={`absolute top-1 bottom-1 w-[50%] bg-white rounded-full shadow-sm transition-all duration-300 ease-out ${
                         activeTab === 'macros' ? 'left-1' : 'left-[49%]'

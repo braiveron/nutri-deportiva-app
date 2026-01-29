@@ -2,21 +2,18 @@ import { useState } from "react";
 import RecipeChef from "../components/RecipeChef";
 import RecipeHistory from "../components/RecipeHistory";
 import PremiumLock from "../components/PremiumLock";
+import ProfileIncomplete from "../components/ProfileIncomplete"; // 👈 IMPORTAR
 
 export default function CocinaPage({ macros, userId, userRole, onUnlock }) {
   const [refreshHistory, setRefreshHistory] = useState(0);
 
+  // 1️⃣ PRIMERO: ¿TIENE DATOS?
+  // Si no hay macros, mostramos la pantalla de "Perfil Incompleto"
   if (!macros) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh] animate-fade-in px-4 text-center">
-        <span className="text-6xl mb-4">⚠️</span>
-        <h3 className="text-2xl font-bold text-gray-400 uppercase tracking-widest">Perfil Incompleto</h3>
-        <p className="text-gray-500 mt-2">Primero ve a la sección "Perfil" y calcula tu plan.</p>
-      </div>
-    );
+    return <ProfileIncomplete type="cocina" />;
   }
 
-  // 🔥 LÓGICA VIP: Verificamos si es PRO o ADMIN
+  // 2️⃣ SEGUNDO: ¿ES PRO O ADMIN?
   const hasAccess = userRole === 'pro' || userRole === 'admin';
 
   return (

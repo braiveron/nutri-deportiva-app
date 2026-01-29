@@ -1,19 +1,16 @@
 import TrainingCoach from "../components/TrainingCoach";
 import PremiumLock from "../components/PremiumLock";
+import ProfileIncomplete from "../components/ProfileIncomplete"; // 👈 IMPORTAR
 
 export default function EntrenoPage({ initialData, userId, userRole, onPlanCreated, userGoal, onUnlock }) {
     
+    // 1️⃣ PRIMERO: ¿TIENE DATOS?
     if (!initialData) {
-        return (
-            <div className="flex flex-col items-center justify-center h-[60vh] animate-fade-in px-4 text-center">
-                <span className="text-6xl mb-4">⚠️</span>
-                <h3 className="text-2xl font-bold text-gray-400 uppercase tracking-widest">Perfil Incompleto</h3>
-                <p className="text-gray-500 mt-2">Configura tu perfil para generar un entrenamiento.</p>
-            </div>
-        );
+        return <ProfileIncomplete type="entreno"/>;
     }
 
-    // 🔥 LÓGICA VIP: Si NO es pro Y TAMPOCO es admin, mostramos el candado
+    // 2️⃣ SEGUNDO: ¿TIENE PERMISO?
+    // Si NO es pro Y TAMPOCO es admin, mostramos el candado
     if (userRole !== 'pro' && userRole !== 'admin') {
         return (
             <div className="flex flex-col items-center pt-10 animate-fade-in px-4 w-full">
