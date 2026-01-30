@@ -1,112 +1,90 @@
-import { useEffect } from "react";
-import { createPortal } from "react-dom"; // 👈 Importamos esto para el "teletransporte"
+import React from 'react';
+import { createPortal } from 'react-dom'; // 👈 1. IMPORTAMOS ESTO
 
-export default function StatusModal({ type, title, message, onClose, onConfirm }) {
-  const isSuccess = type === 'success';
-  const isError = type === 'error'; 
-  const isConfirm = type === 'confirm'; 
-  const isLoading = type === 'loading';
+export default function StatusModal({ 
+  type = 'info', 
+  title, 
+  message, 
+  onClose, 
+  onConfirm, 
+  confirmText = "ACEPTAR", 
+  cancelText = "CANCELAR" 
+}) {
+  
+  const colors = {
+    success: { 
+        bg: 'bg-green-50', border: 'border-green-500', text: 'text-green-800', 
+        icon: '✅', btn: 'bg-green-600 hover:bg-green-700 text-white' 
+    },
+    error: { 
+        bg: 'bg-red-50', border: 'border-red-500', text: 'text-red-800', 
+        icon: '❌', btn: 'bg-red-600 hover:bg-red-700 text-white' 
+    },
+    warning: { 
+        bg: 'bg-yellow-50', border: 'border-yellow-500', text: 'text-yellow-800', 
+        icon: '⚠️', btn: 'bg-yellow-500 hover:bg-yellow-600 text-white' 
+    },
+    info: { 
+        bg: 'bg-blue-50', border: 'border-blue-500', text: 'text-blue-800', 
+        icon: 'ℹ️', btn: 'bg-blue-600 hover:bg-blue-700 text-white' 
+    },
+  };
 
-  const showActionButtons = (isConfirm || isError) && typeof onConfirm === 'function';
+  const style = colors[type] || colors.info;
 
-  // Bloqueamos el scroll del cuerpo cuando el modal está abierto
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, []);
-
-  // El contenido del modal
+  // 👈 2. GUARDAMOS EL JSX DEL MODAL EN UNA VARIABLE
   const modalContent = (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4 animate-fade-in">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+      {/* z-[9999]: Asegura que esté encima de TODO (incluso del Navbar).
+          bg-black/80: Oscurece más el fondo para tapar bien lo de atrás.
+      */}
       
-      {/* 1. FONDO OSCURO (BLOQUEO) RESTAURADO */}
-      <div 
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
-        onClick={(!isLoading && !showActionButtons) ? onClose : undefined} 
-      ></div>
-
-      {/* 2. EL MODAL */}
-      <div className="relative bg-sportDark border-2 border-white/10 shadow-2xl rounded-2xl p-8 max-w-sm w-full text-center transform transition-all scale-100">
+      <div className={`bg-white w-full max-w-sm rounded-xl shadow-2xl overflow-hidden transform transition-all scale-100 border-t-4 ${style.border}`}>
         
-        {/* ICONO */}
-        <div className={`mx-auto flex items-center justify-center h-16 w-16 rounded-full mb-6 ${
-            isSuccess ? 'bg-green-500/10 text-green-500' : 
-            isError ? 'bg-red-500/10 text-red-500' : 
-            isLoading ? 'bg-blue-500/10 text-blue-400' : 
-            'bg-yellow-500/10 text-yellow-500' 
-        }`}>
-            {isSuccess && (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                </svg>
-            )}
-            {(isError || (isConfirm && !isSuccess && !isLoading)) && (
-                 <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    {isError ? (
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    ) : (
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    )}
-                 </svg>
-            )}
-            {isLoading && (
-                <svg className="animate-spin h-8 w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-            )}
+        {/* CUERPO */}
+        <div className={`p-6 text-center ${style.bg}`}>
+            <div className="text-4xl mb-3 drop-shadow-md animate-bounce-slow">
+                {style.icon}
+            </div>
+            <h3 className={`text-xl font-black uppercase italic tracking-wider mb-2 ${style.text}`}>
+              {title}
+            </h3>
+            <p className="text-gray-600 text-sm font-medium leading-relaxed">
+              {message}
+            </p>
         </div>
 
-        <h3 className="text-2xl font-display font-bold text-white italic mb-2 uppercase tracking-wide">
-            {title}
-        </h3>
-        <p className="text-gray-300 text-sm mb-8 leading-relaxed font-medium">
-            {message}
-        </p>
-
         {/* BOTONES */}
-        {!isLoading && (
-            <>
-                {showActionButtons ? (
-                    <div className="flex gap-3">
-                        <button
-                            onClick={onClose}
-                            className="flex-1 py-3 rounded-lg font-bold text-xs uppercase tracking-widest bg-white/5 hover:bg-white/10 text-gray-300 transition-colors border border-white/10"
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            onClick={onConfirm}
-                            className={`flex-1 py-3 rounded-lg font-bold text-xs uppercase tracking-widest text-white shadow-lg transition-transform transform hover:scale-105 ${
-                                isError 
-                                ? 'bg-red-600 hover:bg-red-500 shadow-red-900/20' 
-                                : 'bg-sportRed hover:bg-red-600 shadow-red-900/20'
-                            }`}
-                        >
-                            {isError ? 'ELIMINAR' : 'CONFIRMAR'}
-                        </button>
-                    </div>
-                ) : (
-                    <button
-                    onClick={onClose}
-                    className={`w-full py-3 px-4 rounded-lg font-bold text-sm uppercase tracking-widest transition-all transform hover:scale-[1.02] shadow-lg ${
-                        isSuccess 
-                        ? 'bg-green-600 hover:bg-green-500 text-white shadow-green-900/20' 
-                        : 'bg-white/10 hover:bg-white/20 text-white border border-white/10'
-                    }`}
+        <div className="bg-white p-4 flex gap-3 justify-center border-t border-gray-100">
+            {onConfirm ? (
+                <>
+                    <button 
+                        onClick={onClose}
+                        className="flex-1 py-3 bg-white border border-gray-200 text-gray-500 font-bold uppercase text-xs rounded-lg hover:bg-gray-100 transition-colors tracking-wider"
                     >
-                    {isSuccess ? '¡Vamos!' : 'Entendido'}
+                        {cancelText}
                     </button>
-                )}
-            </>
-        )}
+                    <button 
+                        onClick={onConfirm}
+                        className={`flex-1 py-3 font-bold uppercase text-xs rounded-lg shadow-md transition-transform active:scale-95 tracking-wider ${style.btn}`}
+                    >
+                        {confirmText}
+                    </button>
+                </>
+            ) : (
+                <button 
+                    onClick={onClose}
+                    className="w-full py-3 bg-gray-900 text-white font-bold uppercase text-xs rounded-lg hover:bg-black transition-colors tracking-wider shadow-lg"
+                >
+                    ENTENDIDO
+                </button>
+            )}
+        </div>
       </div>
     </div>
   );
 
-  // 🔥 MAGIA: Usamos createPortal para renderizarlo fuera de la jerarquía actual
-  // Esto hace que "salte" cualquier overflow:hidden o transform del padre
+  // 👈 3. USAMOS EL PORTAL PARA RENDERIZARLO EN EL BODY
+  // Esto "saca" el modal del div padre y lo pone directo en el body del navegador.
   return createPortal(modalContent, document.body);
 }

@@ -15,7 +15,6 @@ router.post("/cancelar-suscripcion", userController.cancelarSuscripcion);
 router.get("/mi-plan/:userId", userController.obtenerPlan);
 
 // 🔥 CORRECCIÓN CRÍTICA: Cambiamos a DELETE y unificamos la URL con el Frontend
-// Esto debe coincidir con: fetch(`${API_URL}/user/delete/${userId}`, { method: "DELETE" })
 router.delete("/user/delete/:userId", userController.deleteUserAccount);
 
 // --- RUTAS IA GENERATIVA ---

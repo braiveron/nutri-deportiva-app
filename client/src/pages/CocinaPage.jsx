@@ -2,18 +2,18 @@ import { useState } from "react";
 import RecipeChef from "../components/RecipeChef";
 import RecipeHistory from "../components/RecipeHistory";
 import PremiumLock from "../components/PremiumLock";
-import ProfileIncomplete from "../components/ProfileIncomplete"; // 👈 IMPORTAR
+import ProfileIncomplete from "../components/ProfileIncomplete";
 
 export default function CocinaPage({ macros, userId, userRole, onUnlock }) {
   const [refreshHistory, setRefreshHistory] = useState(0);
+  
+  // 👇 1. ESTADO PARA COMUNICAR BORRADOS
+  const [deletedRecipeId, setDeletedRecipeId] = useState(null);
 
-  // 1️⃣ PRIMERO: ¿TIENE DATOS?
-  // Si no hay macros, mostramos la pantalla de "Perfil Incompleto"
   if (!macros) {
     return <ProfileIncomplete type="cocina" />;
   }
 
-  // 2️⃣ SEGUNDO: ¿ES PRO O ADMIN?
   const hasAccess = userRole === 'pro' || userRole === 'admin';
 
   return (
@@ -24,12 +24,16 @@ export default function CocinaPage({ macros, userId, userRole, onUnlock }) {
                macros={macros} 
                userId={userId} 
                onRecipeCreated={() => setRefreshHistory(prev => prev + 1)}
+               deletedRecipeId={deletedRecipeId} // 👈 2. LE PASAMOS LA NOTICIA AL CHEF
            />
-           <RecipeHistory key={refreshHistory} userId={userId} />
+           <RecipeHistory 
+                key={refreshHistory} 
+                userId={userId} 
+                onDeleteSuccess={(id) => setDeletedRecipeId(id)} // 👈 3. ESCUCHAMOS EL BORRADO
+           />
          </>
        ) : (
          <div className="flex flex-col items-center w-full">
-             
              <PremiumLock onUnlock={onUnlock} type="cocina"/>
          </div>
        )}

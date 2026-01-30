@@ -1,14 +1,27 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
-import { api } from '../services/api'; // 👈 IMPORTAMOS LA API CENTRALIZADA
+import { api } from '../services/api'; 
 
-export default function RecipeChef({ macros, userId, onRecipeCreated }) {
+// 👇 1. RECIBIMOS 'deletedRecipeId' DEL PADRE
+export default function RecipeChef({ macros, userId, onRecipeCreated, deletedRecipeId }) {
   const [ingredientes, setIngredientes] = useState('');
   const [tipoComida, setTipoComida] = useState('');
   const [receta, setReceta] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  
+  // 👇 2. NUEVO ESTADO: Guardamos el ID real de la base de datos al guardar
+  const [currentSavedId, setCurrentSavedId] = useState(null);
+
+  // 👇 3. EFECTO: Si borran la receta que tenemos en pantalla, reseteamos el botón
+  useEffect(() => {
+    if (deletedRecipeId && deletedRecipeId === currentSavedId) {
+        console.log("♻️ La receta actual fue eliminada. Reseteando botón...");
+        setSaved(false);
+        setCurrentSavedId(null);
+    }
+  }, [deletedRecipeId, currentSavedId]);
 
   const cocinar = async (e) => {
     e.preventDefault();
@@ -17,10 +30,10 @@ export default function RecipeChef({ macros, userId, onRecipeCreated }) {
     setLoading(true);
     setReceta(null);
     setSaved(false);
+    setCurrentSavedId(null); // 👈 4. RESETEAMOS EL ID AL COCINAR ALGO NUEVO
 
     const objetivo = macros || { calorias: 600, proteinas: 40 };
 
-    // Construimos el objeto de datos que espera la API
     const datosReceta = {
         ingredientes: ingredientes.split(',').map(i => i.trim()),
         tipoComida,
@@ -29,7 +42,6 @@ export default function RecipeChef({ macros, userId, onRecipeCreated }) {
     };
 
     try {
-      // 🔥 CORRECCIÓN: Usamos la función de la API en lugar de fetch directo
       const data = await api.createRecipe(datosReceta);
       
       if (data.receta) {
@@ -50,16 +62,23 @@ export default function RecipeChef({ macros, userId, onRecipeCreated }) {
     setSaving(true);
 
     try {
-        const { error } = await supabase
+        // 👇 5. USAMOS .select() PARA OBTENER EL ID GENERADO
+        const { data, error } = await supabase
             .from('saved_recipes')
             .insert({
                 user_id: userId,
                 recipe_data: receta
-            });
+            })
+            .select(); // IMPORTANTE: Esto devuelve el registro creado
 
         if (error) throw error;
 
         setSaved(true);
+        
+        // Guardamos el ID para saber qué receta es esta
+        if (data && data.length > 0) {
+            setCurrentSavedId(data[0].id);
+        }
         
         if (onRecipeCreated) onRecipeCreated();
 

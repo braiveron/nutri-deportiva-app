@@ -72,24 +72,53 @@ export default function Calculator({ onCalculationSuccess, initialData, userId }
         if (nuevoPlan) {
             setResultadoLocal(nuevoPlan);
             if(onCalculationSuccess) onCalculationSuccess(nuevoPlan);
+            
+            // 🔥 AUTO-GUARDADO AL CAMBIAR OBJETIVO EN SELECTOR
+            // Si el usuario cambia el objetivo en el menú desplegable, también queremos guardarlo
+            if (userId && !loading) {
+                 api.updateUserProfile(userId, { objetivo: formData.objetivo });
+            }
         }
     }
-  },     // eslint-disable-next-line react-hooks/exhaustive-deps
-[formData.objetivo, todosLosPlanes]); 
+  }, // eslint-disable-next-line react-hooks/exhaustive-deps
+  [formData.objetivo, todosLosPlanes]); 
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  // 👇 FUNCIÓN ACTUALIZADA Y CORREGIDA
-// client/src/components/Calculator.jsx
+  // 👇 FUNCIÓN CON LA LÓGICA DE GUARDADO INTEGRADA
+// ... dentro de Calculator.jsx
 
-const realizarCalculo = async (datosParaCalcular, esManual = false) => {
+  const realizarCalculo = async (datosParaCalcular, esManual = false) => {
     if (!datosParaCalcular.peso || !datosParaCalcular.altura || !datosParaCalcular.edad) {
         return; 
     }
 
     setLoading(true);
     try {
-      // ✅ CAMBIO CLAVE: Usamos el servicio centralizado 'api' en lugar de un fetch manual
+      // 1. Guardar en Base de Datos (Intentamos)
+      if (userId) {
+          api.updateUserProfile(userId, {
+              peso: Number(datosParaCalcular.peso),
+              altura: Number(datosParaCalcular.altura),
+              edad: Number(datosParaCalcular.edad),
+              genero: datosParaCalcular.genero,
+              nivel_actividad: datosParaCalcular.nivel_actividad,
+              objetivo: datosParaCalcular.objetivo
+          });
+      }
+
+      // 👇 2. LLENAR LA MOCHILA (ESTO ES LO NUEVO Y CRÍTICO)
+      // Guardamos los datos en el navegador para que Entreno los vea INMEDIATAMENTE
+      const mochila = {
+          peso: Number(datosParaCalcular.peso),
+          altura: Number(datosParaCalcular.altura),
+          edad: Number(datosParaCalcular.edad),
+          nivel: datosParaCalcular.nivel_actividad
+      };
+      localStorage.setItem("nutri_temp_data", JSON.stringify(mochila));
+      console.log("🎒 Mochila guardada:", mochila);
+
+      // 3. Calculamos Macros (API)
       const data = await api.calculatePlan({
           userId: userId, 
           peso: Number(datosParaCalcular.peso), 
@@ -100,9 +129,7 @@ const realizarCalculo = async (datosParaCalcular, esManual = false) => {
           objetivo: datosParaCalcular.objetivo
       });
 
-      if (!data || !data.plan) {
-         throw new Error("Respuesta vacía del servidor");
-      }
+      if (!data || !data.plan) throw new Error("Respuesta vacía");
 
       setLastSavedData(datosParaCalcular);
 
@@ -117,14 +144,13 @@ const realizarCalculo = async (datosParaCalcular, esManual = false) => {
       }
 
     } catch (error) {
-      console.error("Error en cálculo:", error);
-      if (esManual) {
-         alert("Error al calcular: Verifica que el servidor (Backend) esté funcionando.");
-      }
+      console.error("Error cálculo:", error);
+      if (esManual) alert("Error de conexión con el servidor.");
     } finally {
       setLoading(false);
     }
-};
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.peso || !formData.altura || !formData.edad) {

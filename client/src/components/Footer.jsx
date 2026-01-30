@@ -20,7 +20,7 @@ export default function Footer() {
         {/* IZQUIERDA */}
         <div className={`flex items-center gap-1 transition-colors cursor-default ${isWelcomePage ? "hover:text-gray-200" : "hover:text-gray-800"}`}>
           <span className="text-sportRed text-xs">©</span>
-          <span>{currentYear} Nutri Aéreo</span>
+          <span>{currentYear} NutriSport App</span>
         </div>
 
         {/* CENTRO */}

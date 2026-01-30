@@ -16,16 +16,13 @@ export default function Navbar({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
-  const menuRef = useRef(null); // Referencia para detectar clics afuera
+  const menuRef = useRef(null); 
 
   // --- LÓGICA DE COLOR ADAPTATIVO ---
-  // Detectamos si estamos en la página de bienvenida (fondo oscuro)
   const isWelcomePage = location.pathname === "/bienvenida";
 
-  // --- CERRAR AL HACER CLIC AFUERA ---
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // Si el menú está abierto y el clic NO es dentro del contenedor, lo cerramos
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setMenuOpen(false);
       }
@@ -40,25 +37,25 @@ export default function Navbar({
     };
   }, [menuOpen]);
 
-  // Estilo para links del Navbar Desktop
+  // Estilo Navbar Desktop
   const isActive = (path) => location.pathname === path 
     ? "text-sportRed font-bold border-b-2 border-sportRed pb-1" 
     : "text-gray-400 hover:text-white transition-colors pb-1 border-b-2 border-transparent hover:border-gray-700";
 
-  // Estilo para links del Menú Móvil (Dentro del dropdown)
+  // Estilo Links Móvil (Dropdown) - AHORA MÁS LIMPIO
   const mobileLinkStyle = (path) => `
     block w-full text-left px-4 py-3 text-xs font-black uppercase tracking-widest transition-colors border-l-2
     ${location.pathname === path 
-        ? "text-sportRed bg-black/20 border-sportRed" 
-        : "text-gray-400 hover:text-white hover:bg-gray-800 border-transparent"}
+        ? "text-sportRed bg-red-50 border-sportRed" // Fondo rojo muy suave al estar activo
+        : "text-gray-500 hover:text-sportRed hover:bg-gray-50 border-transparent"} // Gris osc y hover limpio
   `;
 
   return (
     <nav className={`sticky top-0 z-50 transition-all duration-500 border-b ${
       isWelcomePage 
-        ? "bg-gray-900/10 backdrop-blur-md border-gray-800 shadow-lg" // Estilo para fondo oscuro
-        : "bg-gray-900 border-gray-700 shadow-2xl" // Estilo sólido para páginas blancas
-    } px-4 py-3 md:px-6 md:py-4`}> {/* Padding reducido en movil */}
+        ? "bg-gray-900/10 backdrop-blur-md border-gray-800 shadow-lg" 
+        : "bg-gray-900 border-gray-700 shadow-2xl"
+    } px-4 py-3 md:px-6 md:py-4`}>
       
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         
@@ -72,7 +69,7 @@ export default function Navbar({
           </Link>
         </div>
 
-        {/* MENU DESKTOP (Oculto en móvil) */}
+        {/* MENU DESKTOP */}
         <div className="hidden md:flex items-center gap-8 text-sm uppercase tracking-widest font-medium">
             <Link to="/perfil" className={isActive('/perfil')}>Perfil</Link>
             <Link to="/cocina" className={isActive('/cocina')}>Cocina</Link>
@@ -101,13 +98,13 @@ export default function Navbar({
                 </div>
             </button>
 
-            {/* MENÚ DESPLEGABLE */}
+            {/* MENÚ DESPLEGABLE REFRESCADO (ESTILO BLANCO/LIMPIO) */}
             {menuOpen && (
-                <div className="absolute right-0 mt-4 w-64 bg-gray-900 rounded-xl shadow-2xl border border-gray-800 overflow-hidden animate-fade-in py-2 z-50">
+                <div className="absolute right-0 mt-4 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden animate-fade-in py-2 z-50">
                     
-                    {/* 👇 SECCIÓN MÓVIL: NAVEGACIÓN (Solo visible en Mobile md:hidden) */}
-                    <div className="md:hidden border-b border-gray-800 pb-2 mb-2">
-                        <p className="px-4 py-2 text-[9px] font-black text-gray-600 uppercase tracking-[0.2em]">Navegación</p>
+                    {/* SECCIÓN MÓVIL: NAVEGACIÓN */}
+                    <div className="md:hidden border-b border-gray-100 pb-2 mb-2">
+                        <p className="px-4 py-2 text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">Navegación</p>
                         <Link to="/perfil" onClick={() => setMenuOpen(false)} className={mobileLinkStyle('/perfil')}>Perfil</Link>
                         <Link to="/cocina" onClick={() => setMenuOpen(false)} className={mobileLinkStyle('/cocina')}>Cocina</Link>
                         <Link to="/entrenamiento" onClick={() => setMenuOpen(false)} className={mobileLinkStyle('/entrenamiento')}>Entrenamiento</Link>
@@ -123,12 +120,13 @@ export default function Navbar({
                             >
                                 🛡️ PANEL CONTROL
                             </Link>
-                            <div className="h-px bg-gray-800 my-1"></div>
+                            <div className="h-px bg-gray-100 my-1"></div>
                         </>
                     )}
 
-                    <div className="px-4 py-3 bg-gray-800/50 border-b border-gray-800">
-                        <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2">Estado Suscripción</p>
+                    {/* SECCIÓN ESTADO */}
+                    <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
+                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Estado Suscripción</p>
                         {userRole === 'pro' ? (
                             <div className="space-y-1">
                                 <div className="flex items-center justify-between">
@@ -136,11 +134,11 @@ export default function Navbar({
                                     {!autoRenew && <span className="text-[9px] text-orange-400 font-bold uppercase">Expira pronto</span>}
                                 </div>
                                 {autoRenew ? (
-                                    <button onClick={() => { onCancelSub(); setMenuOpen(false); }} className="text-[9px] text-gray-500 font-bold uppercase hover:text-white transition-colors">
+                                    <button onClick={() => { onCancelSub(); setMenuOpen(false); }} className="text-[9px] text-gray-500 font-bold uppercase hover:text-red-600 transition-colors">
                                         Cancelar renovación
                                     </button>
                                 ) : (
-                                    <button onClick={() => { onReactivate(); setMenuOpen(false); }} className="text-[9px] text-green-500 font-black uppercase hover:underline">
+                                    <button onClick={() => { onReactivate(); setMenuOpen(false); }} className="text-[9px] text-green-600 font-black uppercase hover:underline">
                                         Reactivar ahora
                                     </button>
                                 )}
@@ -152,35 +150,37 @@ export default function Navbar({
                         )}
                     </div>
 
-                    <div className="py-2 border-b border-gray-800">
+                    {/* SECCIÓN CUENTA */}
+                    <div className="py-2 border-b border-gray-100">
                         <button 
                             onClick={() => { setMenuOpen(false); onOpenSettings(); }} 
-                            className="w-full text-left px-4 py-2.5 text-[11px] font-bold text-gray-300 uppercase tracking-wider hover:bg-gray-800 hover:text-white transition-all flex items-center justify-between"
+                            className="w-full text-left px-4 py-2.5 text-[11px] font-bold text-gray-600 uppercase tracking-wider hover:bg-gray-50 hover:text-sportRed transition-all flex items-center justify-between"
                         >
-                            Configuración <span className="text-[10px] opacity-30">SET</span>
+                            Configuración <span className="text-[10px] text-gray-300">SET</span>
                         </button>
 
                         <button 
                             onClick={() => { setMenuOpen(false); onOpenSupport(); }} 
-                            className="w-full text-left px-4 py-2.5 text-[11px] font-bold text-gray-300 uppercase tracking-wider hover:bg-gray-800 hover:text-white transition-all flex items-center justify-between"
+                            className="w-full text-left px-4 py-2.5 text-[11px] font-bold text-gray-600 uppercase tracking-wider hover:bg-gray-50 hover:text-sportRed transition-all flex items-center justify-between"
                         >
-                            Soporte / Ayuda <span className="text-[10px] opacity-30">HLP</span>
+                            Soporte / Ayuda <span className="text-[10px] text-gray-300">HLP</span>
                         </button>
                     </div>
 
-                    <div className="pt-2 bg-black/20">
+                    {/* SECCIÓN SALIDA */}
+                    <div className="pt-2">
                         <button 
                           onClick={() => { onLogout(); setMenuOpen(false); }} 
-                          className="w-full text-left px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.15em] text-gray-400 hover:text-white hover:bg-gray-800 transition-all"
+                          className="w-full text-left px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.15em] text-gray-400 hover:text-gray-800 hover:bg-gray-50 transition-all"
                         >
                           Cerrar Sesión
                         </button>
 
                         <button 
                           onClick={() => { setMenuOpen(false); onDeleteAccount(); }} 
-                          className="w-full text-left px-4 py-2 text-[9px] font-black uppercase tracking-tighter text-red-900/60 hover:text-sportRed transition-colors mt-1 pb-3"
+                          className="w-full text-left px-4 py-2 text-[9px] font-black uppercase tracking-tighter text-red-900/40 hover:text-red-600 transition-colors mt-1 pb-3"
                         >
-                          Eliminar Cuenta Permanentemente
+                          Eliminar Cuenta
                         </button>
                     </div>
                 </div>

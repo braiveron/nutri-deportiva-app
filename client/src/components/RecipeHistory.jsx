@@ -1,25 +1,25 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom"; // 1. IMPORTAMOS NAVIGATE
+import { useNavigate } from "react-router-dom"; 
 import { supabase } from "../supabase";
 import { api } from "../services/api"; 
 import StatusModal from "./StatusModal";
 
-export default function RecipeHistory({ userId }) {
+// 👇 1. AÑADIMOS 'onDeleteSuccess' A LAS PROPS
+export default function RecipeHistory({ userId, onDeleteSuccess }) {
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   
-  const navigate = useNavigate(); // 2. INSTANCIAMOS
+  const navigate = useNavigate();
 
-  // 3. AGREGAMOS 'redirect' AL ESTADO INICIAL
   const [modal, setModal] = useState({ 
     show: false, 
     type: 'success', 
     title: '', 
     message: '', 
     onConfirm: null,
-    redirect: null // 👈 Nueva propiedad
+    redirect: null 
   });
 
   useEffect(() => {
@@ -71,6 +71,11 @@ export default function RecipeHistory({ userId }) {
       
       setModal({ show: true, type: 'success', title: '¡Eliminada!', message: 'La receta se ha borrado correctamente.', onConfirm: null, redirect: null });
 
+      // 👇 2. AVISAMOS AL PADRE QUE ESTE ID FUE BORRADO
+      if (onDeleteSuccess) {
+          onDeleteSuccess(id);
+      }
+
     } catch (error) {
       setModal({ show: true, type: 'error', title: 'Error', message: error.message, onConfirm: null, redirect: null });
     }
@@ -104,14 +109,13 @@ export default function RecipeHistory({ userId }) {
       try {
           const res = await api.addDailyLog(logData);
           if (res.success) {
-              // 🔥 4. AQUÍ CONFIGURAMOS LA REDIRECCIÓN AL ÉXITO
               setModal({ 
                   show: true, 
                   type: 'success', 
                   title: '¡Registrado!', 
                   message: 'Tus macros se han actualizado. Vamos a verlos.', 
                   onConfirm: null,
-                  redirect: '/seguimiento' // 👈 La magia ocurre aquí
+                  redirect: '/seguimiento' 
               });
           } else {
               setModal({ show: true, type: 'error', title: 'Error', message: 'No se pudo agregar: ' + res.error, onConfirm: null });
@@ -122,14 +126,11 @@ export default function RecipeHistory({ userId }) {
       }
   };
 
-  // 🔥 5. MODIFICAMOS EL CIERRE PARA EJECUTAR REDIRECCIÓN
   const closeModal = () => {
-    const destination = modal.redirect; // Guardamos la ruta antes de limpiar el estado
-    
-    setModal({ ...modal, show: false, redirect: null }); // Limpiamos
-    
+    const destination = modal.redirect; 
+    setModal({ ...modal, show: false, redirect: null }); 
     if (destination) {
-        navigate(destination); // 🚀 Viajamos
+        navigate(destination); 
     }
   };
 
