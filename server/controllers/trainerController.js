@@ -1,11 +1,13 @@
 const supabaseAdmin = require("../config/supabaseAdmin");
-const { generarRutina } = require("../utils/aiTrainer");
+const Groq = require("groq-sdk");
+
+// Inicializamos Groq
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // 1. GENERAR (SOLO CREA EL JSON, NO GUARDA EN DB)
 const crearEntreno = async (req, res) => {
-  console.log("🧠 [IA] Generando rutina (Borrador)...");
+  console.log("🧠 [Groq] Generando rutina...");
 
-  // Recibimos datos en español (coherencia con Frontend)
   const { userId, objetivo, dias, peso, altura, edad, genero, nivel } =
     req.body;
 
@@ -23,7 +25,7 @@ const crearEntreno = async (req, res) => {
       return res.status(403).json({ error: "REQUIERE PLAN PRO" });
     }
 
-    // B. Buscar datos base en DB (para completar lo que falte)
+    // B. Buscar datos base en DB
     const { data: bio } = await supabaseAdmin
       .from("biometrics")
       .select("*")
@@ -31,7 +33,7 @@ const crearEntreno = async (req, res) => {
       .limit(1)
       .single();
 
-    // C. Consolidar Datos (Prioridad: Frontend > DB)
+    // C. Consolidar Datos
     const datos = {
       peso: peso ? Number(peso) : bio?.weight_kg,
       altura: altura ? Number(altura) : bio?.height_cm,
@@ -48,30 +50,76 @@ const crearEntreno = async (req, res) => {
         .json({ error: "Faltan datos de perfil (Peso/Altura/Edad)." });
     }
 
-    // D. Generar con IA
-    const perfilParaIA = {
-      edad: datos.edad,
-      genero: datos.genero,
-      objetivo: datos.objetivo,
-      nivel_actividad: datos.nivel,
-      dias: datos.dias,
-      peso: datos.peso,
-      altura: datos.altura,
-    };
+    // D. Generar Prompt para Groq (AJUSTADO PARA RUTINAS COMPLETAS)
+    const prompt = `
+      Genera una rutina de entrenamiento personalizada, PROFESIONAL y COMPLETA.
+      
+      PERFIL USUARIO:
+      - Edad: ${datos.edad}, Género: ${datos.genero}
+      - Nivel: ${datos.nivel}
+      - Objetivo: ${datos.objetivo}
+      - Disponibilidad: ${datos.dias} días por semana
 
-    const rutina = await generarRutina(perfilParaIA);
-    if (!rutina) throw new Error("Fallo IA al generar JSON");
+      ESTRUCTURA OBLIGATORIA POR DÍA (NO RECORTAR):
+      1. Calentamiento específico o movilidad (opcional en lista, pero implícito).
+      2. Ejercicios Principales (Compuestos): 1 o 2 ejercicios pesados.
+      3. Ejercicios Accesorios (Hipertrofia): 3 a 5 ejercicios complementarios.
+      
+      REGLAS DE CALIDAD:
+      - Genera entre 5 y 7 ejercicios REALES por sesión. (3 ejercicios es insuficiente).
+      - Si el objetivo es fuerza/hipertrofia, asegura volumen suficiente.
+      - Duración objetivo: 45-60 min (Logra esto ajustando descansos, NO quitando ejercicios).
 
-    // E. Agregamos metadatos útiles
+      ESTRUCTURA JSON OBLIGATORIA (Responde SOLO con este JSON):
+      {
+        "nombre_rutina": "Nombre atractivo (ej: PowerBuilding Fase 1)",
+        "frecuencia": "${datos.dias} días por semana",
+        "enfoque": "Ej: Fuerza / Hipertrofia",
+        "dias": [
+          {
+            "dia": "Día 1 - Grupo Muscular (ej: Pectoral + Tríceps)",
+            "ejercicios": [
+              { "nombre": "Nombre Ejercicio", "series": "4", "reps": "8-10", "descanso": "90s" },
+              { "nombre": "Nombre Ejercicio", "series": "3", "reps": "12-15", "descanso": "60s" }
+            ]
+          }
+        ],
+        "tip_extra": "Consejo técnico avanzado"
+      }
+      
+      Nota: Asegúrate de generar exactamente ${datos.dias} días distintos.
+    `;
+
+    // E. Llamada a la IA (Groq)
+    const completion = await groq.chat.completions.create({
+      messages: [
+        {
+          role: "system",
+          content:
+            "Eres un Entrenador de Alto Rendimiento. Diseñas programas serios, con volumen adecuado y selección de ejercicios biomecánicamente correcta.",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      model: "llama-3.3-70b-versatile",
+      temperature: 0.5,
+      response_format: { type: "json_object" },
+    });
+
+    // F. Procesar respuesta
+    const rutina = JSON.parse(completion.choices[0].message.content);
+
+    // Agregamos metadatos útiles
     rutina.objetivo_origen = datos.objetivo;
     rutina.dias_origen = datos.dias;
     rutina.fecha_creacion = new Date().toISOString();
 
-    // 🛑 RESPONDEMOS CON EL JSON (SIN GUARDAR)
     res.json({ exito: true, rutina });
   } catch (error) {
-    console.error("Error Trainer:", error);
-    res.status(500).json({ error: "Error generando entreno" });
+    console.error("❌ Error Trainer (Groq):", error);
+    res.status(500).json({ error: "Error generando entreno con IA" });
   }
 };
 
@@ -85,8 +133,6 @@ const guardarEntreno = async (req, res) => {
   }
 
   try {
-    // A. Insertamos en la tabla 'saved_workouts' (Historial)
-    // Asegúrate de haber creado esta tabla en Supabase SQL
     const { data, error } = await supabaseAdmin
       .from("saved_workouts")
       .insert({
@@ -99,8 +145,6 @@ const guardarEntreno = async (req, res) => {
 
     if (error) throw error;
 
-    // B. Actualizamos también el perfil 'biometrics'
-    // Para que esta sea la rutina que aparece "Activa" al entrar a la app
     await supabaseAdmin
       .from("biometrics")
       .update({
@@ -109,17 +153,10 @@ const guardarEntreno = async (req, res) => {
       })
       .eq("user_id", userId);
 
-    console.log("✅ Rutina guardada con ID:", data.id);
-    res.json({
-      exito: true,
-      message: "Rutina guardada correctamente",
-      id: data.id,
-    });
+    res.json({ exito: true, message: "Rutina guardada", id: data.id });
   } catch (error) {
-    console.error("❌ Error guardando rutina:", error);
-    res
-      .status(500)
-      .json({ error: "No se pudo guardar la rutina en la base de datos" });
+    console.error("Error guardando rutina:", error);
+    res.status(500).json({ error: "No se pudo guardar la rutina" });
   }
 };
 

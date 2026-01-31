@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import StatusModal from './StatusModal'; // 👈 1. IMPORTAMOS EL MODAL GLOBAL
+import StatusModal from './StatusModal'; 
 
 export default function MacroTracker({ userId, userMacros }) {
   const [logs, setLogs] = useState([]);
@@ -11,7 +11,7 @@ export default function MacroTracker({ userId, userMacros }) {
   const [analyzing, setAnalyzing] = useState(false);
   const [previewData, setPreviewData] = useState(null); 
 
-  // 👇 2. ESTADO DEL MODAL (Reemplaza a logToDelete)
+  // Estado del Modal
   const [modal, setModal] = useState({ 
     show: false, 
     type: 'success', 
@@ -52,7 +52,6 @@ export default function MacroTracker({ userId, userMacros }) {
         if (res.success) setPreviewData({ meal_name: foodInput, ...res.data });
     } catch (error) {
         console.error(error);
-        // 👇 Reemplazamos alert por modal
         setModal({ show: true, type: 'error', title: 'Error', message: 'No pudimos analizar la comida. Intenta de nuevo.', onConfirm: null });
     } finally {
         setAnalyzing(false);
@@ -62,12 +61,12 @@ export default function MacroTracker({ userId, userMacros }) {
   const handleConfirmAdd = async () => {
     if (!previewData) return;
     
-    // Mostramos carga mientras agrega
     setModal({ show: true, type: 'loading', title: 'Guardando...', message: 'Registrando comida...', onConfirm: null });
 
     const newLog = {
         userId,
         meal_name: previewData.meal_name,
+        // Usamos Number() para asegurar que sea numérico, pero sin perder decimales
         calories: Number(previewData.calories) || 0,
         protein: Number(previewData.protein) || 0,
         carbs: Number(previewData.carbs) || 0,
@@ -80,7 +79,6 @@ export default function MacroTracker({ userId, userMacros }) {
             setLogs([...logs, res.log]); 
             setFoodInput("");           
             setPreviewData(null);       
-            // Cerramos modal de carga
             setModal({ ...modal, show: false });
         }
     } catch {
@@ -88,33 +86,28 @@ export default function MacroTracker({ userId, userMacros }) {
     }
   };
 
-  // 👇 3. CLICK EN EL BOTÓN DE BASURA
   const handleDeleteClick = (id) => {
     setModal({
         show: true,
-        type: 'error', // Tipo error para que el botón sea ROJO
+        type: 'error', 
         title: '¿Borrar Comida?',
         message: 'Se eliminará este registro de tu total diario.',
-        onConfirm: () => executeDelete(id) // Pasamos la ejecución real
+        onConfirm: () => executeDelete(id) 
     });
   };
 
   const executeDelete = async (id) => {
-      // Modal de carga
       setModal({ show: true, type: 'loading', title: 'Borrando...', message: 'Eliminando registro...', onConfirm: null });
       
       try {
           const previousLogs = [...logs];
-          // Actualización optimista (lo borramos visualmente ya)
           setLogs(logs.filter(log => log.id !== id));
 
           const res = await api.deleteDailyLog(id);
           
           if (res.success) {
-             // Éxito: Cerramos modal o mostramos confirmación rápida
              setModal({ show: true, type: 'success', title: '¡Borrado!', message: 'Registro eliminado.', onConfirm: null });
           } else {
-             // Si falla, revertimos y mostramos error
              setLogs(previousLogs);
              setModal({ show: true, type: 'error', title: 'Error', message: 'No se pudo borrar.', onConfirm: null });
           }
@@ -135,7 +128,6 @@ export default function MacroTracker({ userId, userMacros }) {
   return (
     <div className="w-full relative">
       
-      {/* 👇 4. RENDERIZAMOS EL MODAL AQUÍ (Gracias al Portal saldrá arriba de todo) */}
       {modal.show && (
         <StatusModal 
             type={modal.type}
@@ -169,7 +161,8 @@ export default function MacroTracker({ userId, userMacros }) {
                     <div className="text-center p-4 bg-gray-50 rounded-xl border border-gray-100">
                         <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Calorías Diarias</span>
                         <div className="flex items-baseline justify-center gap-1 mt-1">
-                            <span className="text-4xl font-bold text-sportDark">{Math.round(consumed.calories)}</span>
+                            {/* 👇 CAMBIO 1: Eliminado Math.round() */}
+                            <span className="text-4xl font-bold text-sportDark">{consumed.calories}</span>
                             <span className="text-gray-400 font-medium">/ {userMacros?.calories || '?'}</span>
                         </div>
                         <div className="text-[10px] text-gray-400 font-bold uppercase mt-1">kcal consumidas</div>
@@ -243,14 +236,15 @@ export default function MacroTracker({ userId, userMacros }) {
                                     <div>
                                         <span className="font-medium text-gray-700 capitalize block">{log.meal_name}</span>
                                         <div className="flex gap-3 text-xs font-medium text-gray-500 mt-1">
-                                            <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-600">{Math.round(log.calories)} kcal</span>
+                                            {/* 👇 CAMBIO 2: Eliminado Math.round() */}
+                                            <span className="bg-gray-100 px-2 py-0.5 rounded text-gray-600">{log.calories} kcal</span>
                                             <span className="text-sportRed">P: {log.protein}</span>
                                             <span className="text-yellow-600">C: {log.carbs}</span>
                                             <span className="text-blue-500">G: {log.fats}</span>
                                         </div>
                                     </div>
                                     <button 
-                                        onClick={() => handleDeleteClick(log.id)} // 👈 USAMOS EL NUEVO HANDLER
+                                        onClick={() => handleDeleteClick(log.id)}
                                         className="text-gray-300 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-all"
                                         title="Eliminar registro"
                                     >
@@ -266,9 +260,6 @@ export default function MacroTracker({ userId, userMacros }) {
             </div>
           </div>
       </div>
-      
-      {/* EL MODAL BLANCO VIEJO FUE ELIMINADO COMPLETAMENTE */}
-
     </div>
   );
 }
@@ -276,7 +267,9 @@ export default function MacroTracker({ userId, userMacros }) {
 function MacroCard({ label, current, target, color, unit }) {
     const safeTarget = target || 1;
     const percent = Math.min((current / safeTarget) * 100, 100);
-    const remaining = Math.max(safeTarget - current, 0).toFixed(1); 
+    // Usamos toFixed(2) en el restante por si acaso la resta genera decimales infinitos, 
+    // pero mantenemos el 'current' (lo consumido) exacto como viene.
+    const remaining = Math.max(safeTarget - current, 0).toFixed(2); 
 
     return (
         <div className="flex flex-col">
@@ -292,6 +285,7 @@ function MacroCard({ label, current, target, color, unit }) {
             </div>
             
             <div className="flex justify-between text-[10px] uppercase font-bold text-gray-400 tracking-wider">
+                {/* Aquí mostramos el valor EXACTO actual */}
                 <span>{current} {unit}</span>
                 <span>{safeTarget} {unit}</span>
             </div>

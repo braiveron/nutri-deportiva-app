@@ -17,6 +17,7 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
+    "groq-sdk": "^0.37.0",
     "mercadopago": "^2.12.0",
     "pg": "^8.17.2",
     "ualabis-nodejs": "^1.0.1"

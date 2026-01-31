@@ -11,7 +11,7 @@ const API_URL = isLocal
 
 console.log("🌍 Entorno:", isLocal ? "LOCAL" : "PRODUCCIÓN");
 
-// Función auxiliar para fechas
+// Función auxiliar para fechas (para evitar problemas de zona horaria)
 const getLocalDate = () => {
   const date = new Date();
   const offset = date.getTimezoneOffset();
@@ -48,12 +48,10 @@ export const api = {
     }
   },
 
-  // --- GESTIÓN DE CUENTA (CORREGIDO) ---
+  // --- GESTIÓN DE CUENTA ---
   updateUserProfile: async (userId, dataToUpdate) => {
     console.log("💾 Intentando guardar:", dataToUpdate);
 
-    // 1. TRADUCCIÓN: Convertimos Español (Frontend) -> Inglés (Base de Datos)
-    // Creamos un objeto payload solo con los campos que existan en dataToUpdate
     const payload = { updated_at: new Date() };
 
     if (dataToUpdate.nombre) payload.nombre = dataToUpdate.nombre;
@@ -70,7 +68,6 @@ export const api = {
 
     console.log("📤 Payload traducido para DB:", payload);
 
-    // 2. Actualizamos la tabla 'profiles' en Supabase
     const { error: dbError } = await supabase
       .from("profiles")
       .update(payload)
@@ -81,7 +78,7 @@ export const api = {
       return { success: false, error: dbError };
     }
 
-    // 3. Actualizar metadata de Auth si cambiaron el nombre
+    // Actualizar metadata de Auth
     if (payload.nombre || payload.apellido) {
       const { data: userData } = await supabase.auth.getUser();
       const currentMeta = userData?.user?.user_metadata || {};
@@ -99,7 +96,6 @@ export const api = {
         });
       }
     }
-
     return { success: true };
   },
 
@@ -125,30 +121,31 @@ export const api = {
     }
   },
 
-  // --- IA GENERADORA ---
+  // --- IA GENERADORA (RECETAS Y ENTRENO) ---
   createRecipe: async (userParams) => {
-    const response = await fetch(`${API_URL}/crear-receta`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(userParams),
-    });
-    return await response.json();
+    try {
+      const response = await fetch(`${API_URL}/crear-receta`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(userParams),
+      });
+      return await response.json();
+    } catch (error) {
+      console.error("Error creating recipe:", error);
+      return { receta: null };
+    }
   },
-
-  // En client/src/services/api.js
 
   createWorkout: async (userParams) => {
     // 1. Limpieza de datos
     const diasNumber = parseInt(userParams.dias || userParams.days || 4);
 
-    // 2. UNIFICACIÓN: Enviamos en ESPAÑOL, igual que tus variables del front.
+    // 2. UNIFICACIÓN: Enviamos en ESPAÑOL
     const payload = {
       userId: userParams.userId,
       objetivo: userParams.objetivo || userParams.goal,
       dias: diasNumber,
       nivel: userParams.nivel || "intermedio",
-
-      // 👇 AQUÍ LA CLAVE: Lo mandamos tal cual se llama en tu código
       peso: userParams.peso ? Number(userParams.peso) : undefined,
       altura: userParams.altura ? Number(userParams.altura) : undefined,
       edad: userParams.edad ? Number(userParams.edad) : undefined,
@@ -213,6 +210,8 @@ export const api = {
     );
     return await response.json();
   },
+
+  // 👇 ESTA ES LA FUNCIÓN ORIGINAL (La usa tu Tracker Diario)
   addDailyLog: async (logData) => {
     const payload = { ...logData, date: logData.date || getLocalDate() };
     const response = await fetch(`${API_URL}/tracker/add`, {
@@ -222,6 +221,19 @@ export const api = {
     });
     return await response.json();
   },
+
+  // 👇 ESTA ES LA NUEVA FUNCIÓN (La usa el Chef para agregar recetas)
+  // Es básicamente lo mismo que addDailyLog, pero con el nombre que espera el componente
+  addLog: async (logData) => {
+    const payload = { ...logData, date: logData.date || getLocalDate() };
+    const response = await fetch(`${API_URL}/tracker/add`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return await response.json();
+  },
+
   analyzeFood: async (text) => {
     const response = await fetch(`${API_URL}/tracker/analyze`, {
       method: "POST",

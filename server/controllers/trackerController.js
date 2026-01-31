@@ -1,29 +1,28 @@
-// 1. Importamos la librería
+// 1. Importamos librerías
 const { createClient } = require("@supabase/supabase-js");
+const Groq = require("groq-sdk");
 
-// 2. INICIALIZACIÓN PROFESIONAL
-// Usamos SUPABASE_SERVICE_ROLE_KEY para permisos de Admin (saltar RLS)
+// 2. INICIALIZACIÓN SUPABASE (Admin)
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY,
 );
 
+// 3. INICIALIZACIÓN GROQ (IA)
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
 // --- FUNCIONES DEL CONTROLADOR ---
 
 // 1. OBTENER LOGS DE UN DÍA
 exports.getDailyLogs = async (req, res) => {
-  const { id } = req.params; // Esto espera que la ruta sea /tracker/:id
+  const { id } = req.params;
   const { date } = req.query;
 
   try {
     let query = supabase.from("daily_logs").select("*").eq("user_id", id);
-
-    if (date) {
-      query = query.eq("date", date);
-    }
+    if (date) query = query.eq("date", date);
 
     const { data, error } = await query;
-
     if (error) throw error;
     res.json({ success: true, logs: data });
   } catch (error) {
@@ -31,7 +30,7 @@ exports.getDailyLogs = async (req, res) => {
   }
 };
 
-// 2. AGREGAR COMIDA
+// 2. AGREGAR COMIDA (MANUAL O VIA IA)
 exports.addDailyLog = async (req, res) => {
   const { userId, meal_name, calories, protein, carbs, fats, date } = req.body;
 
@@ -59,28 +58,90 @@ exports.addDailyLog = async (req, res) => {
   }
 };
 
-// 3. ANALIZAR CON IA (Gemini)
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
+// 3. ANALIZAR CON IA + CACHÉ GLOBAL 🚀 (La joya de la corona)
 exports.analyzeFood = async (req, res) => {
   const { text } = req.body;
+  if (!text) return res.status(400).json({ error: "Falta el texto" });
+
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
-    const prompt = `Analiza este alimento: "${text}". Devuelve SOLO un objeto JSON (sin markdown, sin texto extra) con estimaciones de: calories, protein, carbs, fats. Ejemplo: {"calories": 200, "protein": 10, "carbs": 20, "fats": 5}. Si no es alimento, devuelve campos en 0.`;
+    // A. Normalizamos la búsqueda (para que "2 Huevos" sea igual a "2 huevos")
+    const queryLimpia = text.trim().toLowerCase();
+    console.log(`🔍 Analizando: "${queryLimpia}"`);
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const textResponse = response.text();
+    // B. BUSCAR EN CACHÉ (Base de Datos)
+    const { data: cachedFood } = await supabase
+      .from("food_library")
+      .select("*")
+      .eq("search_query", queryLimpia)
+      .single();
 
-    // Limpieza para asegurar JSON válido
-    const jsonString = textResponse.replace(/```json|```/g, "").trim();
-    const nutrientData = JSON.parse(jsonString);
+    if (cachedFood) {
+      console.log("⚡ [CACHE HIT] Encontrado en DB. Ahorrando llamada a IA.");
+      // Devolvemos lo que ya sabíamos, adaptando la estructura
+      return res.json({
+        success: true,
+        data: {
+          meal_name: cachedFood.meal_name, // Usamos el nombre que guardamos
+          calories: cachedFood.calories,
+          protein: cachedFood.protein,
+          carbs: cachedFood.carbs,
+          fats: cachedFood.fats,
+        },
+      });
+    }
 
-    res.json({ success: true, data: nutrientData });
+    // C. SI NO ESTÁ EN CACHÉ -> CONSULTAMOS A GROQ
+    console.log("🤖 [CACHE MISS] Consultando a Groq...");
+
+    const completion = await groq.chat.completions.create({
+      messages: [
+        {
+          role: "system",
+          content: `Eres un nutricionista experto. 
+          Tarea: Analiza el texto y devuelve la info nutricional aproximada.
+          
+          REGLAS:
+          1. Responde SOLO JSON.
+          2. Si es cantidad vaga ("pollo"), asume 100g o 1 unidad estándar.
+          3. Estructura: {"meal_name": "Nombre Corto", "calories": 0, "protein": 0, "carbs": 0, "fats": 0}`,
+        },
+        { role: "user", content: text },
+      ],
+      model: "llama-3.3-70b-versatile",
+      temperature: 0.1,
+      response_format: { type: "json_object" },
+    });
+
+    const aiResult = JSON.parse(completion.choices[0].message.content);
+
+    // D. GUARDAR EN BIBLIOTECA (Para el futuro)
+    // Usamos el nombre que devolvió la IA ("meal_name" o "food_name" según lo que devuelva)
+    const foodName = aiResult.meal_name || aiResult.food_name || text;
+
+    const { error: insertError } = await supabase.from("food_library").insert({
+      search_query: queryLimpia,
+      meal_name: foodName,
+      calories: aiResult.calories,
+      protein: aiResult.protein,
+      carbs: aiResult.carbs,
+      fats: aiResult.fats,
+    });
+
+    if (!insertError) {
+      console.log("💾 [GUARDADO] Agregado a la biblioteca global.");
+    }
+
+    // E. RESPONDER AL CLIENTE
+    // Normalizamos la respuesta para que el frontend siempre reciba "meal_name"
+    res.json({
+      success: true,
+      data: { ...aiResult, meal_name: foodName },
+    });
   } catch (error) {
-    console.error("Error Gemini:", error);
-    res.status(500).json({ success: false, error: "Error al analizar" });
+    console.error("❌ Error Analyzer:", error);
+    res
+      .status(500)
+      .json({ success: false, error: "No pude analizar la comida." });
   }
 };
 
@@ -89,7 +150,6 @@ exports.deleteLog = async (req, res) => {
   const { id } = req.params;
   try {
     const { error } = await supabase.from("daily_logs").delete().eq("id", id);
-
     if (error) throw error;
     res.json({ success: true });
   } catch (error) {
@@ -100,19 +160,14 @@ exports.deleteLog = async (req, res) => {
 // 5. BORRAR CUENTA COMPLETA
 exports.deleteUserAccount = async (req, res) => {
   const { id } = req.params;
-
   try {
-    // Borramos logs diarios
     await supabase.from("daily_logs").delete().eq("user_id", id);
-    // Borramos recetas guardadas
     await supabase.from("saved_recipes").delete().eq("user_id", id);
-    // Borramos historial de peso
     await supabase.from("weight_logs").delete().eq("user_id", id);
-    // Borramos el perfil
+    await supabase.from("saved_workouts").delete().eq("user_id", id);
     const { error } = await supabase.from("profiles").delete().eq("id", id);
 
     if (error) throw error;
-
     res.json({ success: true });
   } catch (error) {
     console.error("Error eliminando cuenta:", error);
@@ -120,15 +175,11 @@ exports.deleteUserAccount = async (req, res) => {
   }
 };
 
-// 6. REGISTRAR PESO (NUEVO)
+// 6. REGISTRAR PESO
 exports.addWeightLog = async (req, res) => {
   const { userId, weight, date } = req.body;
-
-  // Validación básica
   if (!userId || !weight) {
-    return res
-      .status(400)
-      .json({ success: false, error: "Faltan datos (userId o weight)" });
+    return res.status(400).json({ success: false, error: "Faltan datos" });
   }
 
   try {
@@ -146,7 +197,7 @@ exports.addWeightLog = async (req, res) => {
   }
 };
 
-// 7. OBTENER HISTORIAL DE PESO (NUEVO)
+// 7. OBTENER HISTORIAL DE PESO
 exports.getWeightHistory = async (req, res) => {
   const { id } = req.params;
   try {
