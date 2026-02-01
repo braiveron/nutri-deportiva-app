@@ -10,11 +10,12 @@ const trackerController = require("../controllers/trackerController");
 
 // --- RUTAS DE USUARIO ---
 router.post("/calcular-plan", userController.calcularPlan);
-router.post("/suscribirse", userController.suscribirse);
-router.post("/cancelar-suscripcion", userController.cancelarSuscripcion);
 router.get("/mi-plan/:userId", userController.obtenerPlan);
 
-// 🔥 CORRECCIÓN CRÍTICA: Cambiamos a DELETE y unificamos la URL con el Frontend
+// 👇 ESTA ES LA RUTA CRÍTICA PARA LA FECHA DE MEMBRESÍA
+router.post("/suscribirse", userController.suscribirse);
+
+router.post("/cancelar-suscripcion", userController.cancelarSuscripcion);
 router.delete("/user/delete/:userId", userController.deleteUserAccount);
 
 // --- RUTAS IA GENERATIVA ---

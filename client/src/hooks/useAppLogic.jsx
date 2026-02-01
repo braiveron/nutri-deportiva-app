@@ -10,8 +10,6 @@ export function useAppLogic() {
   const [userMacros, setUserMacros] = useState(null);
   const [userRole, setUserRole] = useState(null); 
   const [initialCalcData, setInitialCalcData] = useState(null);
-  
-  // Estados de Suscripción
   const [autoRenew, setAutoRenew] = useState(false);
   const [subEndDate, setSubEndDate] = useState(null);
 
@@ -19,7 +17,6 @@ export function useAppLogic() {
   const [loadingRole, setLoadingRole] = useState(false);
   const [checkingBiometrics, setCheckingBiometrics] = useState(true);
   
-  // Modal State
   const [paymentModal, setPaymentModal] = useState({ 
       show: false, type: 'success', title: '', message: '', onConfirm: null 
   });
@@ -61,13 +58,11 @@ export function useAppLogic() {
       if (data) {
         setSubEndDate(data.subscription_end_date);
         setAutoRenew(data.auto_renew);
-        
         if (data.role === 'admin') {
             setUserRole('admin');
         } else {
             const hoy = new Date();
             const vencimiento = data.subscription_end_date ? new Date(data.subscription_end_date) : null;
-            
             if (vencimiento && vencimiento < hoy) {
                 setUserRole('free');
             } else {
@@ -106,55 +101,74 @@ export function useAppLogic() {
        Promise.all([fetchUserProfile(session.user.id), loadBiometrics(session.user.id)])
          .finally(() => setCheckingBiometrics(false));
     }
-  },    // eslint-disable-next-line react-hooks/exhaustive-deps
- [session?.user?.id]);
+  }, // eslint-disable-next-line react-hooks/exhaustive-deps
+  [session]);
 
-
-  // DETECCIÓN DE PAGO
+  // 👇 DETECCIÓN DE PAGO (CORREGIDA Y SIN BLOQUEOS)
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const status = params.get("collection_status");
-    const yaProcesado = sessionStorage.getItem("payment_has_been_processed");
-
-    if (status && session?.user?.id) {
-        window.history.replaceState({}, document.title, location.pathname);
-
-        if (yaProcesado === "true") return; 
-
-        if (status === "approved") {
-            sessionStorage.setItem("payment_has_been_processed", "true");
-
-            const processPayment = async () => {
-                try {
-                    const response = await api.subscribeUser(session.user.id);
-                    if (response.success) {
-                        setUserRole("pro");
-                        setAutoRenew(true);
-                        const updatedProfile = await fetchUserProfile(session.user.id);
-                        
-                        let modalTitle = '¡Bienvenido a PRO!';
-                        let modalMsg = 'Tu pago se procesó correctamente.';
-                        
-                        if (updatedProfile?.subscription_end_date) {
-                            const vencimiento = new Date(updatedProfile.subscription_end_date);
-                            const fechaTexto = vencimiento.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
-                            modalMsg = `Tu suscripción está activa hasta el ${fechaTexto}.`;
-                        }
     
-                        setPaymentModal({
-                            show: true, type: 'success', title: modalTitle, message: modalMsg, onConfirm: null
-                        });
+    // Eliminamos la comprobación de 'yaProcesado' de sessionStorage aquí
+    // para asegurar que siempre intente procesar si la URL lo dice.
+    
+    if (status === "approved" && session?.user?.id) {
+        
+        // Evitamos que se ejecute si el modal ya está abierto (evita bucles en React Strict Mode)
+        if (paymentModal.show) return;
+
+        const processPayment = async () => {
+            console.log("💳 [UseAppLogic] Detectado pago aprobado. Procesando...");
+            
+            // 1. Mostrar modal de carga
+            setPaymentModal({ 
+                show: true, type: 'loading', title: 'Confirmando Pago...', message: 'Estamos activando tu membresía en el sistema.', onConfirm: null 
+            });
+
+            try {
+                // 2. Llamar al backend (Esto activa la fecha en DB)
+                const response = await api.subscribeUser(session.user.id);
+                
+                if (response.success) {
+                    console.log("✅ [UseAppLogic] Suscripción activada en DB.");
+                    
+                    setUserRole("pro");
+                    setAutoRenew(true);
+                    
+                    // Traemos la fecha recién creada
+                    const updatedProfile = await fetchUserProfile(session.user.id);
+                    
+                    let modalTitle = '¡Bienvenido a PRO!';
+                    let modalMsg = 'Tu pago se procesó correctamente.';
+                    
+                    if (updatedProfile?.subscription_end_date) {
+                        const vencimiento = new Date(updatedProfile.subscription_end_date);
+                        const fechaTexto = vencimiento.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+                        modalMsg = `Tu suscripción está activa hasta el ${fechaTexto}.`;
                     }
-                } catch (err) {
-                    console.error(err);
-                    sessionStorage.removeItem("payment_has_been_processed");
-                    setPaymentModal({ show: true, type: 'error', title: 'Error', message: 'Hubo un problema.', onConfirm: null });
+
+                    // 3. Modal Confirmación (Manual)
+                    setPaymentModal({
+                        show: true, 
+                        type: 'confirm', // 👈 ESTO EVITA QUE SE CIERRE SOLO
+                        title: modalTitle, 
+                        message: modalMsg, 
+                        onConfirm: () => {
+                            setPaymentModal(prev => ({ ...prev, show: false }));
+                            navigate(location.pathname, { replace: true }); // Limpia URL
+                            // NO usamos reload() para evitar parpadeos, el estado ya está actualizado.
+                        }
+                    });
                 }
-            };
-            processPayment();
-        }
+            } catch (err) {
+                console.error("❌ Error activando suscripción:", err);
+                setPaymentModal({ show: true, type: 'error', title: 'Error', message: 'Hubo un problema activando tu cuenta.', onConfirm: null });
+            }
+        };
+        processPayment();
     }
-  }, [location, session]);
+  }, // eslint-disable-next-line react-hooks/exhaustive-deps
+  [location, session, navigate]); // Dependencias limpias
 
   // --- HANDLERS ---
 
@@ -163,10 +177,12 @@ export function useAppLogic() {
     if (session?.user?.id) await loadBiometrics(session.user.id);
   };
 
+  // 👇 CORREGIDO: Eliminado el parámetro redirectPath que causaba error
   const handleSimulateUpgrade = async () => {
     if (!session) return;
     try {
-        const data = await api.createPaymentPreference(session.user.id);
+        console.log("🚀 Iniciando pago simulado...");
+        const data = await api.createPaymentPreference(session.user.id); 
         if (data.init_point) window.location.href = data.init_point;
     } catch {
         setPaymentModal({ show: true, type: 'error', title: 'Error', message: 'Error de conexión.', onConfirm: null });
@@ -188,43 +204,21 @@ export function useAppLogic() {
     }
   };
 
-// 🔥 CORRECCIÓN: ELIMINACIÓN DE CUENTA EN useAppLogic.js
   const handleDeleteAccount = () => {
     setPaymentModal({
-      show: true,
-      type: "error",
-      title: "⚠️ ¿ELIMINAR CUENTA?",
-      message: "Esta acción es irreversible. Se borrarán todos tus progresos y planes.",
+      show: true, type: "error", title: "⚠️ ¿ELIMINAR CUENTA?", message: "Esta acción es irreversible.",
       onConfirm: async () => {
         try {
-          // 1. Llamada a la API para borrar datos
           const response = await api.deleteUserAccount(session.user.id);
-          
           if (response.success || response.message) {
-            // 2. Cerramos modal PRIMERO para evitar bloqueos visuales
             closePaymentModal();
-
-            // 3. Forzamos el SignOut de Supabase
             await supabase.auth.signOut();
-            
-            // 4. Limpieza total de almacenamiento
             window.localStorage.clear();
             window.sessionStorage.clear();
-            
-            // 5. Redirección forzada al login
             window.location.replace("/"); 
-          } else {
-            throw new Error("El servidor no confirmó el borrado");
-          }
-        } catch (err) {
-          console.error("Error al eliminar cuenta:", err);
-          setPaymentModal({ 
-            show: true, 
-            type: 'error', 
-            title: 'Error Crítico', 
-            message: 'No pudimos eliminar la cuenta. Intenta cerrar sesión manualmente.', 
-            onConfirm: null 
-          });
+          } else { throw new Error("Error borrando"); }
+        } catch {
+          setPaymentModal({ show: true, type: 'error', title: 'Error Crítico', message: 'No pudimos eliminar la cuenta.', onConfirm: null });
         }
       }
     });
@@ -247,9 +241,7 @@ export function useAppLogic() {
 
   const handleCancelSubscription = async () => {
     if (!session) return;
-    setPaymentModal({
-        show: true, type: 'confirm', title: '¿Cancelar renovación?', message: 'Seguirás siendo PRO hasta fin de mes.', onConfirm: proceedWithCancellation 
-    });
+    setPaymentModal({ show: true, type: 'confirm', title: '¿Cancelar renovación?', message: 'Seguirás siendo PRO hasta fin de mes.', onConfirm: proceedWithCancellation });
   };
 
   const handleLogout = async () => {

@@ -1,7 +1,6 @@
 require("dotenv").config();
 const { createClient } = require("@supabase/supabase-js");
 
-// Inicialización con permisos de Admin
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -9,11 +8,8 @@ const supabase = createClient(
 
 // --- LÓGICA DE CÁLCULO NUTRICIONAL (Interna) ---
 const calcularMacros = (peso, altura, edad, genero, nivel_actividad) => {
-  // 1. TMB (Mifflin-St Jeor)
   let tmb = 10 * peso + 6.25 * altura - 5 * edad;
   tmb = genero === "masculino" ? tmb + 5 : tmb - 161;
-
-  // 2. Factores de Actividad
   const factores = {
     sedentario: 1.2,
     ligero: 1.375,
@@ -22,8 +18,6 @@ const calcularMacros = (peso, altura, edad, genero, nivel_actividad) => {
     muy_intenso: 1.9,
   };
   const mantenimiento = Math.round(tmb * (factores[nivel_actividad] || 1.2));
-
-  // 3. Crear variantes según objetivo
   const generarPlan = (kcal, pMult, gMult) => {
     const proteinas = Math.round(peso * pMult);
     const grasas = Math.round(peso * gMult);
@@ -33,7 +27,6 @@ const calcularMacros = (peso, altura, edad, genero, nivel_actividad) => {
       macros: { proteinas, carbohidratos, grasas },
     };
   };
-
   return {
     todos_los_planes: {
       perder: generarPlan(mantenimiento - 500, 2.2, 0.8),
@@ -53,7 +46,6 @@ exports.obtenerPlan = async (req, res) => {
       .select("*")
       .eq("id", userId)
       .single();
-
     if (error) throw error;
     res.json({ existe: true, datos: data });
   } catch (error) {
@@ -64,9 +56,7 @@ exports.obtenerPlan = async (req, res) => {
 exports.calcularPlan = async (req, res) => {
   const { userId, peso, altura, edad, genero, nivel_actividad, objetivo } =
     req.body;
-
   try {
-    // Generamos el cálculo matemático
     const planCalculado = calcularMacros(
       Number(peso),
       Number(altura),
@@ -74,8 +64,6 @@ exports.calcularPlan = async (req, res) => {
       genero,
       nivel_actividad,
     );
-
-    // Preparamos los datos para guardar en Supabase
     const updates = {
       updated_at: new Date(),
       weight_kg: Number(peso),
@@ -84,42 +72,50 @@ exports.calcularPlan = async (req, res) => {
       gender: genero,
       activity_level: nivel_actividad,
       goal: objetivo,
-      target_macros: planCalculado, // Guardamos todos los planes calculados
+      target_macros: planCalculado,
     };
-
     const { data, error } = await supabase
       .from("profiles")
       .update(updates)
       .eq("id", userId)
       .select()
       .single();
-
     if (error) throw error;
-
-    // Respondemos al frontend con el plan listo para usar
     res.json({ success: true, plan: planCalculado });
   } catch (error) {
-    console.error("Error en calcularPlan:", error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 };
 
+// 👇 LÓGICA CRÍTICA: CALCULAR FECHA Y GUARDAR
 exports.suscribirse = async (req, res) => {
   const { userId } = req.body;
   try {
+    console.log(`📝 Suscribiendo usuario: ${userId}`);
+
+    // 1. Calcular fecha de vencimiento (Hoy + 1 Mes)
+    const fechaHoy = new Date();
+    const fechaVencimiento = new Date(fechaHoy);
+    fechaVencimiento.setMonth(fechaVencimiento.getMonth() + 1);
+
+    // 2. Guardar en DB
     const { data, error } = await supabase
       .from("profiles")
       .update({
         subscription_tier: "pro",
         subscription_status: "active",
         auto_renew: true,
+        subscription_end_date: fechaVencimiento.toISOString(), // 👈 ESTO FALTABA
         updated_at: new Date(),
       })
       .eq("id", userId)
       .select();
+
     if (error) throw error;
+    console.log(`✅ Usuario PRO hasta: ${fechaVencimiento.toISOString()}`);
     res.json({ success: true, data });
   } catch (error) {
+    console.error("Error suscripción:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
@@ -154,15 +150,13 @@ exports.createSupportTicket = async (req, res) => {
   }
 };
 
-// --- FUNCIONES DE ADMINISTRADOR ---
-
+// --- ADMIN ---
 exports.getAllTickets = async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("support_tickets")
       .select(`*, profiles (*)`)
       .order("created_at", { ascending: false });
-
     if (error) throw error;
     res.json({ success: true, tickets: data });
   } catch (error) {
@@ -185,20 +179,13 @@ exports.resolveTicket = async (req, res) => {
   }
 };
 
-// server/controllers/userController.js
-
 exports.deleteUserAccount = async (req, res) => {
   const { userId } = req.params;
   try {
-    // 🔥 USAMOS LA FUNCIÓN DE ADMIN PARA BORRAR LA CUENTA DE AUTH
-    // Esto borra el login Y el perfil automáticamente (si está bien configurado el cascade)
     const { data, error } = await supabase.auth.admin.deleteUser(userId);
-
     if (error) throw error;
-
-    res.json({ success: true, message: "Cuenta de Auth y Perfil eliminados" });
+    res.json({ success: true, message: "Cuenta eliminada" });
   } catch (error) {
-    console.error("Error eliminando cuenta:", error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 };
