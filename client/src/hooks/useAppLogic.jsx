@@ -101,32 +101,27 @@ export function useAppLogic() {
        Promise.all([fetchUserProfile(session.user.id), loadBiometrics(session.user.id)])
          .finally(() => setCheckingBiometrics(false));
     }
-  }, // eslint-disable-next-line react-hooks/exhaustive-deps
-  [session]);
+  },
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+ [session]); 
 
   // 👇 DETECCIÓN DE PAGO (CORREGIDA Y SIN BLOQUEOS)
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const status = params.get("collection_status");
     
-    // Eliminamos la comprobación de 'yaProcesado' de sessionStorage aquí
-    // para asegurar que siempre intente procesar si la URL lo dice.
-    
     if (status === "approved" && session?.user?.id) {
         
-        // Evitamos que se ejecute si el modal ya está abierto (evita bucles en React Strict Mode)
         if (paymentModal.show) return;
 
         const processPayment = async () => {
             console.log("💳 [UseAppLogic] Detectado pago aprobado. Procesando...");
             
-            // 1. Mostrar modal de carga
             setPaymentModal({ 
                 show: true, type: 'loading', title: 'Confirmando Pago...', message: 'Estamos activando tu membresía en el sistema.', onConfirm: null 
             });
 
             try {
-                // 2. Llamar al backend (Esto activa la fecha en DB)
                 const response = await api.subscribeUser(session.user.id);
                 
                 if (response.success) {
@@ -135,7 +130,6 @@ export function useAppLogic() {
                     setUserRole("pro");
                     setAutoRenew(true);
                     
-                    // Traemos la fecha recién creada
                     const updatedProfile = await fetchUserProfile(session.user.id);
                     
                     let modalTitle = '¡Bienvenido a PRO!';
@@ -147,16 +141,14 @@ export function useAppLogic() {
                         modalMsg = `Tu suscripción está activa hasta el ${fechaTexto}.`;
                     }
 
-                    // 3. Modal Confirmación (Manual)
                     setPaymentModal({
                         show: true, 
-                        type: 'confirm', // 👈 ESTO EVITA QUE SE CIERRE SOLO
+                        type: 'confirm', 
                         title: modalTitle, 
                         message: modalMsg, 
                         onConfirm: () => {
                             setPaymentModal(prev => ({ ...prev, show: false }));
-                            navigate(location.pathname, { replace: true }); // Limpia URL
-                            // NO usamos reload() para evitar parpadeos, el estado ya está actualizado.
+                            navigate(location.pathname, { replace: true }); 
                         }
                     });
                 }
@@ -167,8 +159,8 @@ export function useAppLogic() {
         };
         processPayment();
     }
-  }, // eslint-disable-next-line react-hooks/exhaustive-deps
-  [location, session, navigate]); // Dependencias limpias
+  },    // eslint-disable-next-line react-hooks/exhaustive-deps 
+  [location, session, navigate]);
 
   // --- HANDLERS ---
 
@@ -177,7 +169,6 @@ export function useAppLogic() {
     if (session?.user?.id) await loadBiometrics(session.user.id);
   };
 
-  // 👇 CORREGIDO: Eliminado el parámetro redirectPath que causaba error
   const handleSimulateUpgrade = async () => {
     if (!session) return;
     try {
@@ -189,14 +180,33 @@ export function useAppLogic() {
     }
   };
 
+  // 👇 LÓGICA CORREGIDA: Mensaje de éxito con fecha real
   const proceedWithCancellation = async () => {
       setPaymentModal({ show: true, type: 'loading', title: 'Procesando...', message: 'Gestionando cancelación...', onConfirm: null });
       if (!session) return;
+      
       try {
         const data = await api.cancelSubscription(session.user.id);
+        
         if (data.success) {
             setAutoRenew(false); 
-            setPaymentModal({ show: true, type: 'success', title: 'Cancelada', message: 'Acceso activo hasta fin de ciclo.', onConfirm: null });
+            
+            // Calculamos el mensaje final
+            let msgFinal = 'Acceso activo hasta fin de ciclo.';
+            if (subEndDate) {
+                const fecha = new Date(subEndDate);
+                const fechaTexto = fecha.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+                msgFinal = `Acceso activo hasta el ${fechaTexto}.`;
+            }
+
+            setPaymentModal({ 
+                show: true, 
+                type: 'success', // Aquí usamos success normal, con botón "ENTENDIDO"
+                title: 'Cancelada', 
+                message: msgFinal, 
+                onConfirm: null 
+            });
+            
             await fetchUserProfile(session.user.id);
         }
       } catch {
@@ -241,7 +251,21 @@ export function useAppLogic() {
 
   const handleCancelSubscription = async () => {
     if (!session) return;
-    setPaymentModal({ show: true, type: 'confirm', title: '¿Cancelar renovación?', message: 'Seguirás siendo PRO hasta fin de mes.', onConfirm: proceedWithCancellation });
+    
+    let mensaje = 'Seguirás siendo PRO hasta fin de mes.';
+    if (subEndDate) {
+        const fecha = new Date(subEndDate);
+        const fechaTexto = fecha.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+        mensaje = `Seguirás siendo PRO hasta el ${fechaTexto}.`;
+    }
+
+    setPaymentModal({ 
+        show: true, 
+        type: 'confirm', 
+        title: '¿Cancelar renovación?', 
+        message: mensaje, 
+        onConfirm: proceedWithCancellation 
+    });
   };
 
   const handleLogout = async () => {

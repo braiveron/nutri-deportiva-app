@@ -6,7 +6,8 @@ export default function Navbar({
   userRole,
   loadingRole, 
   userName, 
-  autoRenew, 
+  autoRenew,
+  subEndDate, // 👈 1. RECIBIMOS LA FECHA AQUÍ
   onSubscribe, 
   onCancelSub, 
   onReactivate,
@@ -42,13 +43,21 @@ export default function Navbar({
     ? "text-sportRed font-bold border-b-2 border-sportRed pb-1" 
     : "text-gray-400 hover:text-white transition-colors pb-1 border-b-2 border-transparent hover:border-gray-700";
 
-  // Estilo Links Móvil (Dropdown) - AHORA MÁS LIMPIO
+  // Estilo Links Móvil (Dropdown)
   const mobileLinkStyle = (path) => `
     block w-full text-left px-4 py-3 text-xs font-black uppercase tracking-widest transition-colors border-l-2
     ${location.pathname === path 
-        ? "text-sportRed bg-red-50 border-sportRed" // Fondo rojo muy suave al estar activo
-        : "text-gray-500 hover:text-sportRed hover:bg-gray-50 border-transparent"} // Gris osc y hover limpio
+        ? "text-sportRed bg-red-50 border-sportRed" 
+        : "text-gray-500 hover:text-sportRed hover:bg-gray-50 border-transparent"} 
   `;
+
+  // 👇 FUNCIÓN AUXILIAR PARA FORMATEAR FECHA
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    // Ejemplo: "28 feb 24"
+    return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: '2-digit' });
+  };
 
   return (
     <nav className={`sticky top-0 z-50 transition-all duration-500 border-b ${
@@ -98,7 +107,7 @@ export default function Navbar({
                 </div>
             </button>
 
-            {/* MENÚ DESPLEGABLE REFRESCADO (ESTILO BLANCO/LIMPIO) */}
+            {/* MENÚ DESPLEGABLE */}
             {menuOpen && (
                 <div className="absolute right-0 mt-4 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden animate-fade-in py-2 z-50">
                     
@@ -131,7 +140,13 @@ export default function Navbar({
                             <div className="space-y-1">
                                 <div className="flex items-center justify-between">
                                     <span className="text-[10px] font-black text-sportRed uppercase italic">Activa (PRO)</span>
-                                    {!autoRenew && <span className="text-[9px] text-orange-400 font-bold uppercase">Expira pronto</span>}
+                                    
+                                    {/* 👇 AQUÍ MOSTRAMOS LA FECHA SI NO HAY AUTORENEW */}
+                                    {!autoRenew && subEndDate && (
+                                        <span className="text-[9px] text-orange-400 font-bold uppercase">
+                                            Expira: {formatDate(subEndDate)}
+                                        </span>
+                                    )}
                                 </div>
                                 {autoRenew ? (
                                     <button onClick={() => { onCancelSub(); setMenuOpen(false); }} className="text-[9px] text-gray-500 font-bold uppercase hover:text-red-600 transition-colors">

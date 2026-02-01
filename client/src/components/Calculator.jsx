@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { api } from "../services/api";
 
 const DESCRIPCIONES = {
-  sedentario: "Oficina / Poco Movimiento",
-  ligero: "1-3 días (Yoga, Caminata)",
-  moderado: "3-5 días (Gym, Trote)",
-  intenso: "6-7 días (CrossFit, Competencia)",
-  muy_intenso: "Doble Turno / Atleta Élite"
+  sedentario: "Poco Movimiento",
+  ligero: "1-3 días de entrenamiento",
+  moderado: "3-5 días de entrenamiento",
+  intenso: "6-7 días de entrenamiento",
+  muy_intenso: "Doble Turno de entrenamiento"
 };
 
 const sonDatosDiferentes = (data1, data2) => {

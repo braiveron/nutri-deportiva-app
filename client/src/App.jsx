@@ -28,6 +28,7 @@ function App() {
     loadingRole, 
     checkingBiometrics, 
     paymentModal,       
+    subEndDate,
     closePaymentModal,
     handleCalculationSuccess, 
     handleSimulateUpgrade, 
@@ -92,6 +93,7 @@ function App() {
         onDeleteAccount={handleDeleteAccount}
         onOpenSettings={() => setShowSettings(true)}
         onOpenSupport={() => setShowSupport(true)} 
+        subEndDate={subEndDate}
       />
 
       {/* 2. MAIN (El contenido flexible) 
