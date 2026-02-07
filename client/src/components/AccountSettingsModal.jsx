@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { api } from "../services/api";
 
 export default function AccountSettingsModal({ userId, currentName, onClose, onUpdateSuccess }) {
+  // Inicializamos nombre y apellido separando el currentName
   const [nombre, setNombre] = useState(() => {
     if (!currentName) return "";
     return currentName.split(" ")[0];
@@ -17,10 +18,10 @@ export default function AccountSettingsModal({ userId, currentName, onClose, onU
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("datos");
   
-  // 👇 ESTADO PARA MENSAJES DE ÉXITO O ERROR
+  // Estado para mensajes
   const [status, setStatus] = useState({ type: "", text: "" });
 
-  // Limpiar mensaje después de 3 segundos
+  // Limpiar mensaje automáticamente
   useEffect(() => {
     if (status.text) {
       const timer = setTimeout(() => setStatus({ type: "", text: "" }), 3000);
@@ -28,37 +29,40 @@ export default function AccountSettingsModal({ userId, currentName, onClose, onU
     }
   }, [status]);
 
- const handleUpdateData = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-  setStatus({ type: "", text: "" });
+  const handleUpdateData = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setStatus({ type: "", text: "" });
 
-  try {
-    const res = await api.updateUserProfile(userId, { nombre, apellido });
-    
-    if (res.success) {
-      setLoading(false); // Quitamos el estado de carga
-      // 1. Mostramos el banner verde primero
-      setStatus({ type: "success", text: "✓ Perfil actualizado correctamente" });
+    try {
+      // Llamamos a la API con nombre y apellido
+      const res = await api.updateUserProfile(userId, { nombre, apellido });
       
-      // 2. IMPORTANTE: Esperamos 2 segundos antes de avisarle a App.jsx que recargue
-      setTimeout(() => {
-        if (onUpdateSuccess) {
-          // Aquí es donde se dispara el window.location.reload() que tenés en App.jsx
-          onUpdateSuccess(); 
-        }
-      }, 2000); 
+      if (res.success) {
+        setLoading(false);
+        setStatus({ type: "success", text: "✓ Perfil actualizado correctamente" });
+        
+        // Esperamos un momento para que el usuario lea el mensaje y recargamos
+        setTimeout(() => {
+          if (onUpdateSuccess) {
+            onUpdateSuccess(); 
+          } else {
+            // Respaldo por seguridad: forzar recarga si no hay función
+            window.location.reload();
+          }
+          onClose(); // Cerramos el modal
+        }, 1500); 
 
-    } else {
+      } else {
+        setLoading(false);
+        const errorMsg = res.error?.message || "Error desconocido";
+        setStatus({ type: "error", text: `❌ ${errorMsg}` });
+      }
+    } catch {
       setLoading(false);
-      const errorMsg = res.error?.message || "Error desconocido";
-      setStatus({ type: "error", text: `❌ ${errorMsg}` });
+      setStatus({ type: "error", text: "❌ Error de conexión" });
     }
-  } catch {
-    setLoading(false);
-    setStatus({ type: "error", text: "❌ Error de conexión" });
-  }
-};
+  };
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
@@ -127,6 +131,9 @@ export default function AccountSettingsModal({ userId, currentName, onClose, onU
                             onChange={(e) => setNombre(e.target.value)}
                             required
                         />
+                         <p className="text-[10px] text-gray-400 mt-1">
+                            Así te llamará tu Nutri-Coach IA.
+                        </p>
                     </div>
                     <div>
                         <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Apellido</label>
@@ -136,7 +143,6 @@ export default function AccountSettingsModal({ userId, currentName, onClose, onU
                             placeholder="Tu apellido"
                             value={apellido}
                             onChange={(e) => setApellido(e.target.value)}
-                            required
                         />
                     </div>
                     <button disabled={loading} className="w-full bg-sportDark text-white py-3 rounded-lg font-bold uppercase tracking-widest hover:bg-black transition-all mt-2 disabled:opacity-50">

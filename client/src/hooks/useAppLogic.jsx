@@ -12,6 +12,9 @@ export function useAppLogic() {
   const [initialCalcData, setInitialCalcData] = useState(null);
   const [autoRenew, setAutoRenew] = useState(false);
   const [subEndDate, setSubEndDate] = useState(null);
+  
+  // 👇 NUEVO ESTADO PARA EL NOMBRE REAL DE LA BASE DE DATOS
+  const [dbUserName, setDbUserName] = useState(null);
 
   // Estados de UI
   const [loadingRole, setLoadingRole] = useState(false);
@@ -47,9 +50,10 @@ export function useAppLogic() {
   const fetchUserProfile = async (userId) => {
     setLoadingRole(true);
     try {
+      // 👇 AQUÍ AGREGAMOS 'nombre' y 'apellido' A LA CONSULTA
       const { data, error } = await supabase
         .from('profiles')
-        .select('subscription_tier, subscription_end_date, auto_renew, role')
+        .select('subscription_tier, subscription_end_date, auto_renew, role, nombre, apellido')
         .eq('id', userId)
         .maybeSingle(); 
       
@@ -58,6 +62,15 @@ export function useAppLogic() {
       if (data) {
         setSubEndDate(data.subscription_end_date);
         setAutoRenew(data.auto_renew);
+        
+        // 👇 LÓGICA DE NOMBRE COMPLETO
+        let fullNameDB = data.nombre || "";
+        if (data.apellido) {
+            fullNameDB += ` ${data.apellido}`;
+        }
+        
+        if (fullNameDB.trim()) setDbUserName(fullNameDB.trim());
+
         if (data.role === 'admin') {
             setUserRole('admin');
         } else {
@@ -89,7 +102,7 @@ export function useAppLogic() {
         setSession(session);
         if(!session) { 
             setCheckingBiometrics(false);
-            setUserMacros(null); setUserRole(null); setInitialCalcData(null); setAutoRenew(false); setSubEndDate(null);
+            setUserMacros(null); setUserRole(null); setInitialCalcData(null); setAutoRenew(false); setSubEndDate(null); setDbUserName(null);
         }
     });
     return () => subscription.unsubscribe();
@@ -103,7 +116,7 @@ export function useAppLogic() {
     }
   },
       // eslint-disable-next-line react-hooks/exhaustive-deps
- [session]); 
+  [session]); 
 
   // 👇 DETECCIÓN DE PAGO (CORREGIDA Y SIN BLOQUEOS)
   useEffect(() => {
@@ -281,11 +294,13 @@ export function useAppLogic() {
     setPaymentModal(prev => ({ ...prev, show: false }));
   };
 
+  // 👇 IMPORTANTE: Pasamos dbUserName al return para que App.jsx lo use
   return {
     session, userMacros, userRole, initialCalcData, autoRenew, subEndDate,
+    dbUserName, // 👈 NUEVO
     loadingRole, checkingBiometrics, paymentModal, updateWorkoutPlan,
     closePaymentModal, handleCalculationSuccess, handleSimulateUpgrade, 
     handleCancelSubscription, handleReactivateSubscription, handleLogout,
     handleDeleteAccount
   };
-}
+} 

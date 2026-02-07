@@ -179,6 +179,38 @@ exports.resolveTicket = async (req, res) => {
   }
 };
 
+// 👇 PEGA ESTO EN server/controllers/userController.js 👇
+
+exports.updateProfile = async (req, res) => {
+  const { userId, nombre, apellido } = req.body;
+
+  if (!userId) return res.status(400).json({ error: "Falta User ID" });
+
+  try {
+    // Preparamos los datos a actualizar
+    const updates = {
+      nombre: nombre,
+      updated_at: new Date(),
+    };
+
+    // Si envías apellido, descomenta esto o asegúrate de tener la columna en Supabase
+    if (apellido) updates.apellido = apellido;
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .update(updates)
+      .eq("id", userId)
+      .select();
+
+    if (error) throw error;
+
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error("Error actualizando perfil:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
 exports.deleteUserAccount = async (req, res) => {
   const { userId } = req.params;
   try {

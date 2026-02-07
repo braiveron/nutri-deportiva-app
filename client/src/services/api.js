@@ -49,54 +49,25 @@ export const api = {
   },
 
   // --- GESTIÓN DE CUENTA ---
-  updateUserProfile: async (userId, dataToUpdate) => {
-    console.log("💾 Intentando guardar:", dataToUpdate);
 
-    const payload = { updated_at: new Date() };
-
-    if (dataToUpdate.nombre) payload.nombre = dataToUpdate.nombre;
-    if (dataToUpdate.apellido) payload.apellido = dataToUpdate.apellido;
-
-    // Mapeo clave para que el Backend reconozca los datos:
-    if (dataToUpdate.peso) payload.weight_kg = Number(dataToUpdate.peso);
-    if (dataToUpdate.altura) payload.height_cm = Number(dataToUpdate.altura);
-    if (dataToUpdate.edad) payload.age = Number(dataToUpdate.edad);
-    if (dataToUpdate.genero) payload.gender = dataToUpdate.genero;
-    if (dataToUpdate.objetivo) payload.goal = dataToUpdate.objetivo;
-    if (dataToUpdate.nivel_actividad)
-      payload.activity_level = dataToUpdate.nivel_actividad;
-
-    console.log("📤 Payload traducido para DB:", payload);
-
-    const { error: dbError } = await supabase
-      .from("profiles")
-      .update(payload)
-      .eq("id", userId);
-
-    if (dbError) {
-      console.error("❌ Error Supabase:", dbError);
-      return { success: false, error: dbError };
+  // 👇 ESTA ES LA FUNCIÓN CORREGIDA
+  // Se conecta al endpoint /user/update que creamos en el backend
+  updateUserProfile: async (userId, userData) => {
+    try {
+      const response = await fetch(`${API_URL}/user/update`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          nombre: userData.nombre,
+          apellido: userData.apellido,
+        }),
+      });
+      return await response.json();
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      return { success: false, error: "Error de conexión" };
     }
-
-    // Actualizar metadata de Auth
-    if (payload.nombre || payload.apellido) {
-      const { data: userData } = await supabase.auth.getUser();
-      const currentMeta = userData?.user?.user_metadata || {};
-      const newNombre = payload.nombre || currentMeta.nombre || "";
-      const newApellido = payload.apellido || currentMeta.apellido || "";
-      const fullName = `${newNombre} ${newApellido}`.trim();
-
-      if (fullName) {
-        await supabase.auth.updateUser({
-          data: {
-            full_name: fullName,
-            nombre: newNombre,
-            apellido: newApellido,
-          },
-        });
-      }
-    }
-    return { success: true };
   },
 
   updateUserPassword: async (newPassword) => {
@@ -223,7 +194,6 @@ export const api = {
   },
 
   // 👇 ESTA ES LA NUEVA FUNCIÓN (La usa el Chef para agregar recetas)
-  // Es básicamente lo mismo que addDailyLog, pero con el nombre que espera el componente
   addLog: async (logData) => {
     const payload = { ...logData, date: logData.date || getLocalDate() };
     const response = await fetch(`${API_URL}/tracker/add`, {
@@ -272,6 +242,21 @@ export const api = {
     const response = await fetch(`${API_URL}/admin/tickets`);
     return await response.json();
   },
+
+  sendChatMessage: async (userId, message) => {
+    try {
+      const response = await fetch(`${API_URL}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, message }),
+      });
+      return await response.json();
+    } catch (error) {
+      console.error("Error en Chatbot:", error);
+      return { success: false, reply: "Error de conexión. Intenta luego." };
+    }
+  },
+
   resolveTicket: async (ticketId) => {
     const response = await fetch(`${API_URL}/admin/resolve`, {
       method: "POST",

@@ -7,10 +7,12 @@ const chefController = require("../controllers/chefController");
 const trainerController = require("../controllers/trainerController");
 const paymentController = require("../controllers/paymentController");
 const trackerController = require("../controllers/trackerController");
+const chatController = require("../controllers/chatController");
 
 // --- RUTAS DE USUARIO ---
 router.post("/calcular-plan", userController.calcularPlan);
 router.get("/mi-plan/:userId", userController.obtenerPlan);
+router.put("/user/update", userController.updateProfile);
 
 // 👇 ESTA ES LA RUTA CRÍTICA PARA LA FECHA DE MEMBRESÍA
 router.post("/suscribirse", userController.suscribirse);
@@ -21,6 +23,7 @@ router.delete("/user/delete/:userId", userController.deleteUserAccount);
 // --- RUTAS IA GENERATIVA ---
 router.post("/crear-receta", chefController.crearReceta);
 router.post("/crear-entreno", trainerController.crearEntreno);
+router.post("/chat", chatController.chatWithAI);
 
 // --- RUTAS PAGOS ---
 router.post("/crear-pago", paymentController.createPreference);

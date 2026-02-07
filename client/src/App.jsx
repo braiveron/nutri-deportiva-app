@@ -9,6 +9,7 @@ import StatusModal from "./components/StatusModal";
 import AccountSettingsModal from "./components/AccountSettingsModal";
 import SupportModal from "./components/SupportModal";
 import Footer from "./components/Footer"; 
+import ChatBot from "./components/ChatBot"; 
 
 // Páginas
 import PerfilPage from "./pages/PerfilPage";
@@ -26,18 +27,19 @@ const ThematicLoader = () => {
   // Iconos SVG (Paths)
   const icons = [
     // Pesa/Mancuerna
-<path d="M6 12h12M2 9a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V9zm16 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V9z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>,
+    <path key="dumbbell" d="M6 12h12M2 9a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V9zm16 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V9z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>,
     // Manzana (Comida)
-<g key="bowl" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none">
+    <g key="bowl" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none">
       <path d="M4 11h16a1 1 0 0 1 1 1v1a7 7 0 0 1-7 7h-4a7 7 0 0 1-7-7v-1a1 1 0 0 1 1-1Z" />
       <path d="M8 7c0-1.1.9-2 2-2" />
       <path d="M12 7V3" />
       <path d="M16 7c0-1.1.9-2 2-2" />
-    </g>,    // Fuego (Calorías)
-    <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.1.2-2.2.6-3.3a7 7 0 0 0 2.9 2.8Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>,
+    </g>,
+    // Fuego (Calorías)
+    <path key="fire" d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.1.2-2.2.6-3.3a7 7 0 0 0 2.9 2.8Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>,
     // Corazón (Salud)
-<path key="ecg" d="M22 12h-4l-3 9L9 3l-3 9H2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>,
-];
+    <path key="ecg" d="M22 12h-4l-3 9L9 3l-3 9H2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>,
+  ];
 
   const phrases = [
     "Calibrando mancuernas",
@@ -85,9 +87,6 @@ const ThematicLoader = () => {
             <h3 className="text-xl font-display font-bold text-sportDark italic animate-pulse">
                {phrases[phraseIndex]}
             </h3>
-          {/*   <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-2 animate-fade-in min-h-[20px]">
-               {phrases[phraseIndex]}
-            </p> */}
         </div>
     </div>
   );
@@ -106,6 +105,7 @@ function App() {
     checkingBiometrics, 
     paymentModal,       
     subEndDate,
+    dbUserName,
     closePaymentModal,
     handleCalculationSuccess, 
     handleSimulateUpgrade, 
@@ -133,7 +133,7 @@ function App() {
   }
 
   // Lógica de Usuario
-  const fullName = session.user.user_metadata.full_name || "Usuario";
+  const fullName = dbUserName || session.user.user_metadata.full_name || "Usuario";
   const firstName = fullName.split(' ')[0]; 
   const hasBiometrics = initialCalcData && initialCalcData.peso > 0;
 
@@ -223,6 +223,7 @@ function App() {
           } />
         </Routes>
       </main>
+      
 
       {/* 3. FOOTER */}
       <Footer />
@@ -253,6 +254,9 @@ function App() {
             onClose={() => setShowSupport(false)}
         />
       )}
+
+      {/* 5. CHATBOT IA FLOTANTE (NUEVO) */}
+      {session && session.user && <ChatBot userId={session.user.id} dbUserName={dbUserName}/>}
 
     </div>
   );
