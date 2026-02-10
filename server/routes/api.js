@@ -3,45 +3,57 @@ const router = express.Router();
 
 // Importamos los controladores
 const userController = require("../controllers/userController");
-const chefController = require("../controllers/chefController");
 const trainerController = require("../controllers/trainerController");
 const paymentController = require("../controllers/paymentController");
 const trackerController = require("../controllers/trackerController");
 const chatController = require("../controllers/chatController");
 
+// Si tienes el chefController.js creado, descomenta la siguiente línea:
+// const chefController = require("../controllers/chefController");
+
 // --- RUTAS DE USUARIO ---
 router.post("/calcular-plan", userController.calcularPlan);
 router.get("/mi-plan/:userId", userController.obtenerPlan);
 router.put("/user/update", userController.updateProfile);
-
-// 👇 ESTA ES LA RUTA CRÍTICA PARA LA FECHA DE MEMBRESÍA
 router.post("/suscribirse", userController.suscribirse);
-
 router.post("/cancelar-suscripcion", userController.cancelarSuscripcion);
 router.delete("/user/delete/:userId", userController.deleteUserAccount);
 
 // --- RUTAS IA GENERATIVA ---
-router.post("/crear-receta", chefController.crearReceta);
+// Si tienes chefController, descomenta esta línea:
+// router.post("/crear-receta", chefController.crearReceta);
+
 router.post("/crear-entreno", trainerController.crearEntreno);
+router.post("/guardar-entreno", trainerController.guardarEntreno);
+
+// Rutas de Entrenamiento (Nuevas)
+router.post("/training/log", trainerController.saveExerciseLog);
+router.get("/training/history", trainerController.getExerciseHistory);
+
 router.post("/chat", chatController.chatWithAI);
 
 // --- RUTAS PAGOS ---
+// 👇 AQUÍ ESTABA EL ERROR (Nombre corregido)
 router.post("/crear-pago", paymentController.createPreference);
 
 // --- RUTAS TRACKER ---
 router.get("/tracker/:id", trackerController.getDailyLogs);
 router.post("/tracker/add", trackerController.addDailyLog);
 router.post("/tracker/analyze", trackerController.analyzeFood);
-router.delete("/tracker/:id", trackerController.deleteLog);
+// Verifica si en trackerController se llama deleteLog o deleteDailyLog (usualmente es deleteDailyLog)
+router.delete(
+  "/tracker/:id",
+  trackerController.deleteLog || trackerController.deleteDailyLog,
+);
 
-// RUTAS DE PESO
+// --- RUTAS DE PESO ---
 router.post("/weight/add", trackerController.addWeightLog);
 router.get("/weight/:id", trackerController.getWeightHistory);
 
-// RUTA DE TICKETS
+// --- RUTAS DE SOPORTE ---
 router.post("/support/create", userController.createSupportTicket);
 
-// RUTAS ADMIN
+// --- RUTAS ADMIN ---
 router.get("/admin/tickets", userController.getAllTickets);
 router.post("/admin/resolve", userController.resolveTicket);
 

@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabase";
 import StatusModal from "./StatusModal";
-import WorkoutDetailsModal from "./WorkoutDetailsModal"; // 👈 1. IMPORTAMOS EL MODAL
+import WorkoutDetailsModal from "./WorkoutDetailsModal"; 
 
-export default function WorkoutHistory({ userId, onDeleteSuccess }) {
+export default function WorkoutHistory({ userId, onDeleteSuccess, onHistoryLoad }) { // 👈 AGREGADO onHistoryLoad
   const [workouts, setWorkouts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState(null);
   
-  // 👇 2. ESTADO PARA CONTROLAR QUÉ RUTINA SE MUESTRA EN EL MODAL
   const [selectedPlanForModal, setSelectedPlanForModal] = useState(null);
 
   const [modal, setModal] = useState({ show: false, type: 'success', title: '', message: '', onConfirm: null });
@@ -27,7 +26,17 @@ export default function WorkoutHistory({ userId, onDeleteSuccess }) {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setWorkouts(data || []);
+      
+      const loadedWorkouts = data || [];
+      setWorkouts(loadedWorkouts);
+
+      // 👇👇 NUEVA LÓGICA SOLICITADA 👇👇
+      // Si hay rutinas y el padre nos pasó la función, le enviamos la más reciente (la primera)
+      if (loadedWorkouts.length > 0 && onHistoryLoad) {
+          onHistoryLoad(loadedWorkouts[0].plan_data);
+      }
+      // 👆👆 FIN DEL CAMBIO 👆👆
+
     } catch (error) {
       console.error("Error cargando historial de rutinas:", error);
     } finally {
@@ -70,7 +79,6 @@ export default function WorkoutHistory({ userId, onDeleteSuccess }) {
       
       {modal.show && <StatusModal {...modal} onClose={closeModal} />}
 
-      {/* 👇 3. AQUÍ RENDERIZAMOS EL MODAL SI HAY UN PLAN SELECCIONADO */}
       {selectedPlanForModal && (
         <WorkoutDetailsModal 
             plan={selectedPlanForModal} 
@@ -122,10 +130,9 @@ export default function WorkoutHistory({ userId, onDeleteSuccess }) {
                         </div>
                     </div>
 
-                    {/* DETALLE EXPANDIDO (RESUMEN + BOTÓN DE ABRIR) */}
+                    {/* DETALLE EXPANDIDO */}
                     {isOpen && (
                         <div className="p-4 bg-gray-50 border-t border-gray-200 animate-fade-in">
-                            {/* Grilla de resumen (lo que ya tenías) */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 mb-4">
                                 {plan.dias.map((dia, i) => (
                                     <div key={i} className="bg-white p-2 border border-gray-200 rounded text-xs shadow-sm">
@@ -135,12 +142,10 @@ export default function WorkoutHistory({ userId, onDeleteSuccess }) {
                                 ))}
                             </div>
                             
-                            {/* TIP */}
                             <div className="text-center mb-4">
                                 <p className="text-xs text-gray-500 italic">"{plan.tip_extra}"</p>
                             </div>
 
-                            {/* 👇 4. BOTÓN NUEVO: ABRIR DETALLE */}
                             <div className="flex justify-center">
                                 <button 
                                     onClick={() => setSelectedPlanForModal(plan)}

@@ -11,7 +11,7 @@ const crearEntreno = async (req, res) => {
   const { userId, objetivo, dias, peso, altura, edad, genero, nivel } =
     req.body;
 
-  if (!userId) return res.status(400).json({ error: "Falta User ID" });
+  if (!userId) return res.status(400).json({ error: "Faltan User ID" });
 
   try {
     // A. Validar Suscripción PRO
@@ -160,4 +160,59 @@ const guardarEntreno = async (req, res) => {
   }
 };
 
-module.exports = { crearEntreno, guardarEntreno };
+// 3. GUARDAR LOG DE EJERCICIO (NUEVO)
+const saveExerciseLog = async (req, res) => {
+  const { userId, exercise_name, weight, reps } = req.body;
+
+  if (!userId || !exercise_name) {
+    return res.status(400).json({ error: "Faltan datos" });
+  }
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("exercise_logs")
+      .insert([
+        {
+          user_id: userId,
+          exercise_name: exercise_name,
+          weight_kg: weight,
+          reps: reps,
+          date: new Date(),
+        },
+      ])
+      .select();
+
+    if (error) throw error;
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error("Error guardando log:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// 4. OBTENER HISTORIAL DE EJERCICIO (NUEVO)
+const getExerciseHistory = async (req, res) => {
+  const { userId, exercise_name } = req.query;
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("exercise_logs")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("exercise_name", exercise_name)
+      .order("created_at", { ascending: false })
+      .limit(5);
+
+    if (error) throw error;
+    res.json({ success: true, history: data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+module.exports = {
+  crearEntreno,
+  guardarEntreno,
+  saveExerciseLog,
+  getExerciseHistory,
+};

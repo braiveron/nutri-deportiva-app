@@ -265,4 +265,33 @@ export const api = {
     });
     return await response.json();
   },
+
+  saveExerciseLog: async (logData) => {
+    try {
+      const response = await fetch(`${API_URL}/training/log`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(logData),
+      });
+      return await response.json();
+    } catch (error) {
+      console.error("Error saveExerciseLog:", error);
+      return { success: false };
+    }
+  },
+
+  // Obtener historial de un ejercicio
+  getExerciseHistory: async (userId, exerciseName) => {
+    try {
+      // Codificamos el nombre para que espacios y tildes no rompan la URL
+      const safeName = encodeURIComponent(exerciseName);
+      const response = await fetch(
+        `${API_URL}/training/history?userId=${userId}&exercise_name=${safeName}`,
+      );
+      return await response.json();
+    } catch (error) {
+      console.error("Error getExerciseHistory:", error);
+      return { success: false, history: [] };
+    }
+  },
 };
