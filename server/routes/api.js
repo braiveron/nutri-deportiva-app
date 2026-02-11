@@ -56,5 +56,6 @@ router.post("/support/create", userController.createSupportTicket);
 // --- RUTAS ADMIN ---
 router.get("/admin/tickets", userController.getAllTickets);
 router.post("/admin/resolve", userController.resolveTicket);
+router.post("/admin/claim", userController.claimAdminRole);
 
 module.exports = router;

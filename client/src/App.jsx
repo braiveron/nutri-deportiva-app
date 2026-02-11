@@ -226,7 +226,7 @@ function App() {
       
 
       {/* 3. FOOTER */}
-      <Footer />
+      <Footer userId={session?.user?.id}/>
 
       {/* 4. MODALES */}
       {paymentModal.show && (

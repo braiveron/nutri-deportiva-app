@@ -221,3 +221,54 @@ exports.deleteUserAccount = async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 };
+
+exports.claimAdminRole = async (req, res) => {
+  const { userId, secretKey } = req.body;
+
+  // 1. Validar Clave Maestra
+  const MASTER_KEY = process.env.ADMIN_SECRET_KEY;
+  if (!secretKey || secretKey !== MASTER_KEY) {
+    return res
+      .status(403)
+      .json({ success: false, error: "Clave incorrecta ⛔" });
+  }
+
+  try {
+    // 2. INICIALIZAR EL SÚPER ADMIN (Service Role)
+    // Esto es necesario para saltarse las reglas de seguridad (RLS) y editar el rol.
+    const supabaseAdmin = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      },
+    );
+
+    // 3. Actualizar el perfil usando el Súper Admin
+    const { data, error } = await supabaseAdmin
+      .from("profiles")
+      .update({ role: "admin" })
+      .eq("id", userId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error Supabase:", error);
+      throw error;
+    }
+
+    res.json({
+      success: true,
+      message: "¡Permisos de ADMIN activados! 👑",
+      user: data,
+    });
+  } catch (error) {
+    console.error("Error CRÍTICO en claimAdminRole:", error);
+    res
+      .status(500)
+      .json({ success: false, error: "Error interno: " + error.message });
+  }
+};

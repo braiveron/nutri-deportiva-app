@@ -7,7 +7,7 @@ export default function Navbar({
   loadingRole, 
   userName, 
   autoRenew,
-  subEndDate, // 👈 1. RECIBIMOS LA FECHA AQUÍ
+  subEndDate, 
   onSubscribe, 
   onCancelSub, 
   onReactivate,
@@ -51,11 +51,9 @@ export default function Navbar({
         : "text-gray-500 hover:text-sportRed hover:bg-gray-50 border-transparent"} 
   `;
 
-  // 👇 FUNCIÓN AUXILIAR PARA FORMATEAR FECHA
   const formatDate = (dateString) => {
     if (!dateString) return "";
     const date = new Date(dateString);
-    // Ejemplo: "28 feb 24"
     return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: '2-digit' });
   };
 
@@ -133,37 +131,46 @@ export default function Navbar({
                         </>
                     )}
 
-                    {/* SECCIÓN ESTADO */}
-                    <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
-                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Estado Suscripción</p>
-                        {userRole === 'pro' ? (
-                            <div className="space-y-1">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-black text-sportRed uppercase italic">Activa (PRO)</span>
-                                    
-                                    {/* 👇 AQUÍ MOSTRAMOS LA FECHA SI NO HAY AUTORENEW */}
-                                    {!autoRenew && subEndDate && (
-                                        <span className="text-[9px] text-orange-400 font-bold uppercase">
-                                            Expira: {formatDate(subEndDate)}
-                                        </span>
+                    {/* SECCIÓN ESTADO (OCULTA PARA ADMIN) */}
+                    {userRole !== 'admin' && (
+                        <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
+                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Estado Suscripción</p>
+                            
+                            {userRole === 'pro' ? (
+                                <div className="space-y-1">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] font-black text-sportRed uppercase italic">Activa (PRO)</span>
+                                        {!autoRenew && subEndDate && (
+                                            <span className="text-[9px] text-orange-400 font-bold uppercase">
+                                                Expira: {formatDate(subEndDate)}
+                                            </span>
+                                        )}
+                                    </div>
+                                    {autoRenew ? (
+                                        <button onClick={() => { onCancelSub(); setMenuOpen(false); }} className="text-[9px] text-gray-500 font-bold uppercase hover:text-red-600 transition-colors">
+                                            Cancelar renovación
+                                        </button>
+                                    ) : (
+                                        <button onClick={() => { onReactivate(); setMenuOpen(false); }} className="text-[9px] text-green-600 font-black uppercase hover:underline">
+                                            Reactivar ahora
+                                        </button>
                                     )}
                                 </div>
-                                {autoRenew ? (
-                                    <button onClick={() => { onCancelSub(); setMenuOpen(false); }} className="text-[9px] text-gray-500 font-bold uppercase hover:text-red-600 transition-colors">
-                                        Cancelar renovación
-                                    </button>
-                                ) : (
-                                    <button onClick={() => { onReactivate(); setMenuOpen(false); }} className="text-[9px] text-green-600 font-black uppercase hover:underline">
-                                        Reactivar ahora
-                                    </button>
-                                )}
-                            </div>
-                        ) : (
-                            <button onClick={() => { onSubscribe(); setMenuOpen(false); }} className="w-full bg-sportRed text-white text-[10px] font-black py-2 rounded uppercase tracking-widest hover:bg-red-700 shadow-lg shadow-red-900/20 transform hover:scale-105 transition-all">
-                                MEJORAR A PRO
-                            </button>
-                        )}
-                    </div>
+                            ) : (
+                                <button onClick={() => { onSubscribe(); setMenuOpen(false); }} className="w-full bg-sportRed text-white text-[10px] font-black py-2 rounded uppercase tracking-widest hover:bg-red-700 shadow-lg shadow-red-900/20 transform hover:scale-105 transition-all">
+                                    MEJORAR A PRO
+                                </button>
+                            )}
+                        </div>
+                    )}
+
+                    {/* MENSAJE ESPECIAL PARA ADMIN */}
+                    {userRole === 'admin' && (
+                        <div className="px-4 py-3 bg-gray-900 border-b border-gray-800 text-center">
+                             <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">SISTEMA ADMINISTRATIVO</p>
+                             <p className="text-[10px] text-white font-bold mt-1">Acceso Total Habilitado</p>
+                        </div>
+                    )}
 
                     {/* SECCIÓN CUENTA */}
                     <div className="py-2 border-b border-gray-100">

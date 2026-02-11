@@ -294,4 +294,18 @@ export const api = {
       return { success: false, history: [] };
     }
   },
+
+  claimAdminRole: async (userId, secretKey) => {
+    try {
+      const response = await fetch(`${API_URL}/admin/claim`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, secretKey }),
+      });
+      return await response.json();
+    } catch (error) {
+      console.error("Error claimAdminRole:", error);
+      return { success: false, error: "Error de conexión con el servidor" };
+    }
+  },
 };
