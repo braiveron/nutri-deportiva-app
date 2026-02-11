@@ -7,9 +7,7 @@ const trainerController = require("../controllers/trainerController");
 const paymentController = require("../controllers/paymentController");
 const trackerController = require("../controllers/trackerController");
 const chatController = require("../controllers/chatController");
-
-// Si tienes el chefController.js creado, descomenta la siguiente línea:
-// const chefController = require("../controllers/chefController");
+const chefController = require("../controllers/chefController");
 
 // --- RUTAS DE USUARIO ---
 router.post("/calcular-plan", userController.calcularPlan);
@@ -20,8 +18,7 @@ router.post("/cancelar-suscripcion", userController.cancelarSuscripcion);
 router.delete("/user/delete/:userId", userController.deleteUserAccount);
 
 // --- RUTAS IA GENERATIVA ---
-// Si tienes chefController, descomenta esta línea:
-// router.post("/crear-receta", chefController.crearReceta);
+router.post("/crear-receta", chefController.crearReceta);
 
 router.post("/crear-entreno", trainerController.crearEntreno);
 router.post("/guardar-entreno", trainerController.guardarEntreno);
