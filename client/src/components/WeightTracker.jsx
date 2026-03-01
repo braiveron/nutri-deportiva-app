@@ -1,38 +1,51 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function WeightTracker({ userId }) {
   const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(true); // 👈 Ahora sí lo usaremos
+  const [loading, setLoading] = useState(true);
   const [newWeight, setNewWeight] = useState("");
   
   const today = new Date().toISOString().split('T')[0];
   const [date, setDate] = useState(today);
 
-  useEffect(() => {
-    if (userId) loadHistory();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
-
-  const loadHistory = async () => {
+  // Definimos loadHistory con useCallback para evitar re-renderizados infinitos
+  // y eliminar la advertencia amarilla de las dependencias.
+  const loadHistory = useCallback(async () => {
+    if (!userId) return;
     try {
       const res = await api.getWeightHistory(userId);
       if (res.success) {
-        const formattedData = res.history.map(item => ({
+        // Lógica para filtrar un punto por día (el último ingresado)
+        const lastWeightsByDay = new Map();
+
+        res.history.forEach(item => {
+          // El Map guarda la fecha como clave y sobreescribe con el valor más reciente
+          lastWeightsByDay.set(item.date, item);
+        });
+
+        const uniqueDaysData = Array.from(lastWeightsByDay.values())
+          .sort((a, b) => new Date(a.date) - new Date(b.date))
+          .map(item => ({
             ...item,
             displayDate: new Date(item.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }),
             val: Number(item.weight)
-        }));
-        setHistory(formattedData);
+          }));
+
+        setHistory(uniqueDaysData);
       }
     } catch (error) {
-      console.error(error);
+      console.error("Error al cargar el historial:", error);
     } finally {
-      // Pequeño delay para que la transición sea suave
       setTimeout(() => setLoading(false), 300);
     }
-  };
+  }, [userId]);
+
+  // Ahora el useEffect puede incluir loadHistory de forma segura
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
 
   const handleAddWeight = async (e) => {
     e.preventDefault();
@@ -42,7 +55,7 @@ export default function WeightTracker({ userId }) {
       const res = await api.addWeightLog(userId, newWeight, date);
       if (res.success) {
         setNewWeight("");
-        loadHistory(); 
+        loadHistory(); // Refrescamos el gráfico tras guardar
       } else {
         alert("Error al guardar");
       }
@@ -54,7 +67,6 @@ export default function WeightTracker({ userId }) {
   const minWeight = history.length > 0 ? Math.min(...history.map(d => d.val)) - 2 : 0;
   const maxWeight = history.length > 0 ? Math.max(...history.map(d => d.val)) + 2 : 100;
 
-  // 👇 SI ESTÁ CARGANDO, MOSTRAMOS UN SKELETON
   if (loading) {
       return (
           <div className="w-full animate-pulse space-y-8">
@@ -69,10 +81,7 @@ export default function WeightTracker({ userId }) {
 
   return (
     <div className="w-full animate-fade-in space-y-8">
-        
-        {/* TARJETA DE RESUMEN */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Input Rápido */}
             <div className="md:col-span-1 bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
                 <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Registrar Peso</h3>
                 <form onSubmit={handleAddWeight} className="flex flex-col gap-3">
@@ -99,10 +108,8 @@ export default function WeightTracker({ userId }) {
                 </form>
             </div>
 
-            {/* Estadísticas Rápidas */}
             <div className="md:col-span-2 bg-gray-900 text-white p-6 rounded-2xl shadow-lg flex flex-col justify-center relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-sportRed/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-                
                 <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-1">Peso Actual</h3>
                 <div className="text-5xl font-display font-bold italic">
                     {history.length > 0 ? history[history.length - 1].val : '--'} <span className="text-xl not-italic text-sportRed">kg</span>
@@ -110,21 +117,19 @@ export default function WeightTracker({ userId }) {
                 
                 {history.length > 1 && (
                     <div className="mt-4 flex items-center gap-2 text-sm font-medium">
-                        {history[history.length - 1].val > history[0].val ? (
-                             <span className="text-green-400">▲ Ganancia Total: +{(history[history.length - 1].val - history[0].val).toFixed(1)} kg</span>
+                        {history[history.length - 1].val >= history[0].val ? (
+                             <span className="text-green-400">▲ Cambio Total: +{(history[history.length - 1].val - history[0].val).toFixed(1)} kg</span>
                         ) : (
-                             <span className="text-yellow-400">▼ Pérdida Total: {(history[history.length - 1].val - history[0].val).toFixed(1)} kg</span>
+                             <span className="text-yellow-400">▼ Cambio Total: {(history[history.length - 1].val - history[0].val).toFixed(1)} kg</span>
                         )}
-                        <span className="text-gray-500">• Desde el inicio</span>
+                        <span className="text-gray-500">• Desde el primer registro</span>
                     </div>
                 )}
             </div>
         </div>
 
-        {/* GRÁFICA */}
         <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 h-[400px]">
-            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-6">Tendencia</h3>
-            
+            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-6">Tendencia Diaria</h3>
             {history.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={history} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
