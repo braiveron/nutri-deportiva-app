@@ -4,7 +4,7 @@ import WeightTracker from "../components/WeightTracker";
 import PremiumLock from "../components/PremiumLock";
 import ProfileIncomplete from "../components/ProfileIncomplete"; // 👈 IMPORTAR
 
-export default function TrackerPage({ macros, userId, userRole, onUnlock }) {
+export default function TrackerPage({ macros, userId, userRole, onUnlock, onWeightChanged }) {
   const [activeTab, setActiveTab] = useState('macros');
 
   const detectarMacrosReales = (data) => {
@@ -84,7 +84,7 @@ export default function TrackerPage({ macros, userId, userRole, onUnlock }) {
             {activeTab === 'macros' ? (
                 <MacroTracker userId={userId} userMacros={finalMacros} />
             ) : (
-                <WeightTracker userId={userId} />
+                <WeightTracker userId={userId} onWeightAdded={onWeightChanged} />
             )}
         </div>
 

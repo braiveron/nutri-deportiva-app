@@ -106,6 +106,7 @@ function App() {
     paymentModal,       
     subEndDate,
     dbUserName,
+    loadBiometrics,
     closePaymentModal,
     handleCalculationSuccess, 
     handleSimulateUpgrade, 
@@ -215,6 +216,7 @@ function App() {
                   userId={session.user.id}
                   userRole={userRole}
                   onUnlock={handleSimulateUpgrade}
+                  onWeightChanged={() => loadBiometrics(session.user.id)}
               />
           } />
 

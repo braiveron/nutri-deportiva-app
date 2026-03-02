@@ -301,6 +301,6 @@ export function useAppLogic() {
     loadingRole, checkingBiometrics, paymentModal, updateWorkoutPlan,
     closePaymentModal, handleCalculationSuccess, handleSimulateUpgrade, 
     handleCancelSubscription, handleReactivateSubscription, handleLogout,
-    handleDeleteAccount
+    handleDeleteAccount, loadBiometrics
   };
 } 

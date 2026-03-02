@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-export default function WeightTracker({ userId }) {
+export default function WeightTracker({ userId, onWeightAdded }) {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newWeight, setNewWeight] = useState("");
@@ -56,6 +56,7 @@ export default function WeightTracker({ userId }) {
       if (res.success) {
         setNewWeight("");
         loadHistory(); // Refrescamos el gráfico tras guardar
+        if (onWeightAdded) onWeightAdded();
       } else {
         alert("Error al guardar");
       }
