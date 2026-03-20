@@ -97,13 +97,22 @@ export default function RecipeHistory({ userId, onDeleteSuccess }) {
       setModal({ show: true, type: 'loading', title: 'Registrando...', message: 'Guardando en tu diario...', onConfirm: null });
 
       const macros = item.recipe_data.macros;
+
+      const parseMacro = (value) => {
+        if (typeof value === 'number') return value;
+        if (!value) return 0;
+        // Elimina cualquier cosa que no sea número o punto decimal
+        const cleaned = value.toString().replace(/[^0-9.]/g, '');
+        return parseFloat(cleaned) || 0;
+    };
+    
       const logData = {
           userId,
           meal_name: item.recipe_data.nombre_receta,
-          calories: macros.calorias || 0,
-          protein: macros.proteinas || 0,
-          carbs: macros.carbohidratos || 0,
-          fats: macros.grasas || 0
+          calories: parseMacro(macros.calorias),
+        protein: parseMacro(macros.proteinas),
+        carbs: parseMacro(macros.carbohidratos),
+        fats: parseMacro(macros.grasas)
       };
 
       try {
