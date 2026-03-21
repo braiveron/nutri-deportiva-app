@@ -34,7 +34,7 @@ export default function CocinaPage({ macros, userId, userRole, onUnlock }) {
          </>
        ) : (
          <div className="flex flex-col items-center w-full">
-             <PremiumLock onUnlock={onUnlock} type="cocina"/>
+             <PremiumLock onUnlock={onUnlock} type="cocina" userId={userId}/>
          </div>
        )}
     </div>

@@ -61,7 +61,7 @@ export default function EntrenoPage({ initialData, userId, userRole, onPlanCreat
 
     // --- VALIDACIONES ---
     if (userRole !== 'pro' && userRole !== 'admin') {
-        return <div className="flex flex-col items-center pt-10 px-4 w-full"><PremiumLock onUnlock={onUnlock} type="entreno"/></div>;
+        return <div className="flex flex-col items-center pt-10 px-4 w-full"><PremiumLock onUnlock={onUnlock} type="entreno" userId={userId}/></div>;
     }
 
     if (!localProfile) return <ProfileIncomplete type="entreno"/>;

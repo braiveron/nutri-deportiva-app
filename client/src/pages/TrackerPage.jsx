@@ -42,7 +42,7 @@ export default function TrackerPage({ macros, userId, userRole, onUnlock, onWeig
   if (userRole !== 'pro' && userRole !== 'admin') {
     return (
         <div className="flex flex-col items-center pt-10 animate-fade-in px-4 w-full">
-             <PremiumLock onUnlock={onUnlock} type="tracker" />
+             <PremiumLock onUnlock={onUnlock} type="tracker" userId={userId}/>
         </div>
     );
   }
