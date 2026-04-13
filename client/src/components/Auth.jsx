@@ -36,9 +36,16 @@ export default function Auth() {
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
+      // Usamos el origen actual (localhost o vercel) para la redirección
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: window.location.origin }
+        options: { 
+          redirectTo: window.location.origin,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'select_account',
+          }
+        }
       });
       if (error) throw error;
     } catch {
@@ -92,7 +99,6 @@ export default function Auth() {
 
   return (
     <div className="fixed inset-0 w-screen h-screen bg-gray-900 overflow-y-auto overflow-x-hidden font-sans">
-      {/* FONDO ORIGINAL */}
       <div className="fixed inset-0 w-full h-full z-0 pointer-events-none">
           {BACKGROUND_IMAGES.map((img, index) => (
               <div key={index} className={`absolute inset-0 w-full h-full transition-all duration-1000 ${index === currentImageIndex ? 'opacity-40 scale-100' : 'opacity-0 scale-110'}`}>
@@ -104,13 +110,11 @@ export default function Auth() {
 
       <div className="relative z-10 min-h-screen flex flex-col md:flex-row items-center justify-around py-12 px-6 md:px-20 lg:px-32">
         
-        {/* COLUMNA IZQUIERDA */}
         <div className="mb-12 md:mb-0 md:text-left text-center max-w-xl flex flex-col gap-6">
             <h1 className="text-6xl md:text-7xl lg:text-8xl font-black italic tracking-tighter leading-none select-none drop-shadow-2xl">
                 <span className="text-white">NUTRI</span><span className="text-sportRed">SPORT</span>
             </h1>
             
-            {/* CAMBIO DE FUENTE EN FRASES: Serif, Medium, con tracking estrecho */}
             <div className="relative h-24 md:h-28 overflow-hidden">
                 {MOTIVATIONAL_PHRASES.map((phrase, index) => (
                     <p 
@@ -128,7 +132,6 @@ export default function Auth() {
             </p>
         </div>
 
-        {/* COLUMNA DERECHA */}
         <div className="w-full max-w-md bg-white border border-gray-200 shadow-2xl overflow-hidden rounded-sm">
             <div className="bg-gray-50 pt-8 pb-6 px-8 border-b border-gray-100 text-center">
                 <h2 className="text-xl font-bold text-gray-400 uppercase tracking-widest">
@@ -141,7 +144,6 @@ export default function Auth() {
                 {errors.general && <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-xs font-bold text-center uppercase">⚠️ {errors.general}</div>}
 
                 <form onSubmit={handleSubmit} className="space-y-5">
-                    {/* ... campos de formulario ... */}
                     {view === 'register' && (
                         <div>
                             <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Nombre Completo</label>
@@ -177,7 +179,6 @@ export default function Auth() {
                         <span className="bg-white px-3 text-[10px] font-bold text-gray-400 uppercase absolute">O continúa con</span>
                     </div>
 
-                    {/* HOVER DE BOTÓN GOOGLE CON MÁS CONTRASTE */}
                     <button 
                         onClick={handleGoogleLogin}
                         type="button"
@@ -186,9 +187,11 @@ export default function Auth() {
                                    hover:bg-gray-900 hover:border-gray-900 hover:shadow-xl transition-all duration-300 group disabled:opacity-50"
                         title="Inicia sesión con Google"
                     >
-                        <svg className="w-6 h-6 transition-transform group-hover:scale-110" viewBox="0 0 24 24">
-                            {/* He modificado el path para que sea blanco en hover usando una clase de Tailwind o simplemente cambiando el fill en el icono si fuera necesario, pero aquí usaremos un filtro de brillo para mantener los colores de Google vivos o contrastados */}
-                            <path className="group-hover:fill-white transition-colors" fill="#EA4335" d="M12.48 10.92v3.28h7.84c-.24 1.84-.9 3.47-1.93 4.67-1.12 1.3-2.85 2.1-5.91 2.1-4.82 0-8.76-3.94-8.76-8.76S7.66 3.45 12.48 3.45c2.6 0 4.61.94 6.07 2.36l2.32-2.32C18.66 1.44 15.89 0 12.48 0 5.58 0 0 5.58 0 12.48s5.58 12.48 12.48 12.48c3.7 0 6.48-1.21 8.67-3.48 2.26-2.26 2.97-5.44 2.97-8.08 0-.77-.07-1.5-.21-2.21h-11.42z"/>
+                        <svg className="w-6 h-6" viewBox="0 0 24 24">
+                          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+                          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                         </svg>
                     </button>
                 </div>
