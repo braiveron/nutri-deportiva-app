@@ -19,7 +19,7 @@ NutriSport es una plataforma integral de alto rendimiento diseñada para la gest
 ### Backend & Inteligencia Artificial
 * **Runtime:** Node.js con **Express.js (v5)**
 * **IA Generativa:** Integración avanzada con **Google Generative AI (Gemini)** y **Groq SDK**.
-* **Pasarelas de Pago:** Implementación de SDKs de **Mercado Pago** y **Ualabis**.
+* **Pasarelas de Pago:** Implementación de SDKs de **Mercado Pago**.
 
 ### Infraestructura & Datos
 * **Base de Datos:** **PostgreSQL** administrado vía **Supabase**.
