@@ -12,8 +12,6 @@ export function useAppLogic() {
   const [initialCalcData, setInitialCalcData] = useState(null);
   const [autoRenew, setAutoRenew] = useState(false);
   const [subEndDate, setSubEndDate] = useState(null);
-  
-  // 👇 NUEVO ESTADO PARA EL NOMBRE REAL DE LA BASE DE DATOS
   const [dbUserName, setDbUserName] = useState(null);
 
   // Estados de UI
@@ -26,6 +24,9 @@ export function useAppLogic() {
 
   const navigate = useNavigate(); 
   const location = useLocation(); 
+
+  // URL de tu Edge Function (Centralizada)
+  const EDGE_FUNCTION_URL = "https://wmxfwlzbgdypyjdtffbp.supabase.co/functions/v1/mercadopago-webhook";
 
   // --- FUNCIONES INTERNAS ---
 
@@ -50,7 +51,6 @@ export function useAppLogic() {
   const fetchUserProfile = async (userId) => {
     setLoadingRole(true);
     try {
-      // 👇 AQUÍ AGREGAMOS 'nombre' y 'apellido' A LA CONSULTA
       const { data, error } = await supabase
         .from('profiles')
         .select('subscription_tier, subscription_end_date, auto_renew, role, nombre, apellido')
@@ -63,12 +63,8 @@ export function useAppLogic() {
         setSubEndDate(data.subscription_end_date);
         setAutoRenew(data.auto_renew);
         
-        // 👇 LÓGICA DE NOMBRE COMPLETO
         let fullNameDB = data.nombre || "";
-        if (data.apellido) {
-            fullNameDB += ` ${data.apellido}`;
-        }
-        
+        if (data.apellido) fullNameDB += ` ${data.apellido}`;
         if (fullNameDB.trim()) setDbUserName(fullNameDB.trim());
 
         if (data.role === 'admin') {
@@ -114,40 +110,43 @@ export function useAppLogic() {
        Promise.all([fetchUserProfile(session.user.id), loadBiometrics(session.user.id)])
          .finally(() => setCheckingBiometrics(false));
     }
-  },
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-  [session]); 
+  }, [session]); 
 
-  // 👇 DETECCIÓN DE PAGO (CORREGIDA Y SIN BLOQUEOS)
+  // 👇 DETECCIÓN DE PAGO (CORREGIDA PARA USAR SUPABASE EDGE FUNCTIONS)
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const status = params.get("collection_status");
     
     if (status === "approved" && session?.user?.id) {
-        
         if (paymentModal.show) return;
 
         const processPayment = async () => {
-            console.log("💳 [UseAppLogic] Detectado pago aprobado. Procesando...");
+            console.log("💳 [UseAppLogic] Pago aprobado. Activando en Supabase...");
             
             setPaymentModal({ 
                 show: true, type: 'loading', title: 'Confirmando Pago...', message: 'Estamos activando tu membresía en el sistema.', onConfirm: null 
             });
 
             try {
-                const response = await api.subscribeUser(session.user.id);
+                // ✅ Llamada a la Edge Function para actualizar el Rol del usuario
+                const response = await fetch(EDGE_FUNCTION_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        userId: session.user.id,
+                        isActionUpdateRole: true 
+                    }),
+                });
                 
-                if (response.success) {
-                    console.log("✅ [UseAppLogic] Suscripción activada en DB.");
-                    
+                const resData = await response.json();
+                
+                if (resData.success) {
                     setUserRole("pro");
                     setAutoRenew(true);
                     
                     const updatedProfile = await fetchUserProfile(session.user.id);
                     
-                    let modalTitle = '¡Bienvenido a PRO!';
                     let modalMsg = 'Tu pago se procesó correctamente.';
-                    
                     if (updatedProfile?.subscription_end_date) {
                         const vencimiento = new Date(updatedProfile.subscription_end_date);
                         const fechaTexto = vencimiento.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -157,7 +156,7 @@ export function useAppLogic() {
                     setPaymentModal({
                         show: true, 
                         type: 'confirm', 
-                        title: modalTitle, 
+                        title: '¡Bienvenido a PRO!', 
                         message: modalMsg, 
                         onConfirm: () => {
                             setPaymentModal(prev => ({ ...prev, show: false }));
@@ -172,8 +171,7 @@ export function useAppLogic() {
         };
         processPayment();
     }
-  },    // eslint-disable-next-line react-hooks/exhaustive-deps 
-  [location, session, navigate]);
+  }, [location, session, navigate]);
 
   // --- HANDLERS ---
 
@@ -183,43 +181,47 @@ export function useAppLogic() {
   };
 
   const handleSimulateUpgrade = async () => {
-    if (!session) return;
     try {
-        console.log("🚀 Iniciando pago simulado...");
-        const data = await api.createPaymentPreference(session.user.id); 
-        if (data.init_point) window.location.href = data.init_point;
-    } catch {
-        setPaymentModal({ show: true, type: 'error', title: 'Error', message: 'Error de conexión.', onConfirm: null });
+      setPaymentModal({ show: true, type: 'loading', title: 'Generando Pago', message: 'Conectando con Mercado Pago...', onConfirm: null });
+      
+      const response = await fetch(EDGE_FUNCTION_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: session.user.id,
+          planPrice: 9990,
+          planName: "Plan NutriSport Premium",
+          isActionCreatePreference: true 
+        }),
+      });
+
+      const data = await response.json();
+      if (data.init_point) {
+        window.location.href = data.init_point;
+      }
+    } catch (error) {
+      console.error("❌ Error en upgrade:", error);
+      setPaymentModal({ show: true, type: 'error', title: 'Error', message: 'No se pudo generar el link de pago.', onConfirm: null });
     }
   };
 
-  // 👇 LÓGICA CORREGIDA: Mensaje de éxito con fecha real
   const proceedWithCancellation = async () => {
       setPaymentModal({ show: true, type: 'loading', title: 'Procesando...', message: 'Gestionando cancelación...', onConfirm: null });
       if (!session) return;
       
       try {
         const data = await api.cancelSubscription(session.user.id);
-        
         if (data.success) {
             setAutoRenew(false); 
-            
-            // Calculamos el mensaje final
             let msgFinal = 'Acceso activo hasta fin de ciclo.';
             if (subEndDate) {
                 const fecha = new Date(subEndDate);
-                const fechaTexto = fecha.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
-                msgFinal = `Acceso activo hasta el ${fechaTexto}.`;
+                msgFinal = `Acceso activo hasta el ${fecha.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}.`;
             }
 
             setPaymentModal({ 
-                show: true, 
-                type: 'success', // Aquí usamos success normal, con botón "ENTENDIDO"
-                title: 'Cancelada', 
-                message: msgFinal, 
-                onConfirm: null 
+                show: true, type: 'success', title: 'Cancelada', message: msgFinal, onConfirm: null 
             });
-            
             await fetchUserProfile(session.user.id);
         }
       } catch {
@@ -237,7 +239,6 @@ export function useAppLogic() {
             closePaymentModal();
             await supabase.auth.signOut();
             window.localStorage.clear();
-            window.sessionStorage.clear();
             window.location.replace("/"); 
           } else { throw new Error("Error borrando"); }
         } catch {
@@ -251,8 +252,13 @@ export function useAppLogic() {
       setPaymentModal({ show: true, type: 'loading', title: 'Reactivando...', message: 'Restaurando renovación...', onConfirm: null });
       if (!session) return;
       try {
-        const response = await api.subscribeUser(session.user.id);
-        if (response.success) {
+        const response = await fetch(EDGE_FUNCTION_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId: session.user.id, isActionUpdateRole: true }),
+        });
+        const resData = await response.json();
+        if (resData.success) {
             setAutoRenew(true);
             setPaymentModal({ show: true, type: 'success', title: '¡Reactivada!', message: `Renovación activa nuevamente.`, onConfirm: null });
             await fetchUserProfile(session.user.id);
@@ -264,20 +270,13 @@ export function useAppLogic() {
 
   const handleCancelSubscription = async () => {
     if (!session) return;
-    
     let mensaje = 'Seguirás siendo PRO hasta fin de mes.';
     if (subEndDate) {
         const fecha = new Date(subEndDate);
-        const fechaTexto = fecha.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
-        mensaje = `Seguirás siendo PRO hasta el ${fechaTexto}.`;
+        mensaje = `Seguirás siendo PRO hasta el ${fecha.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}.`;
     }
-
     setPaymentModal({ 
-        show: true, 
-        type: 'confirm', 
-        title: '¿Cancelar renovación?', 
-        message: mensaje, 
-        onConfirm: proceedWithCancellation 
+        show: true, type: 'confirm', title: '¿Cancelar renovación?', message: mensaje, onConfirm: proceedWithCancellation 
     });
   };
 
@@ -294,13 +293,11 @@ export function useAppLogic() {
     setPaymentModal(prev => ({ ...prev, show: false }));
   };
 
-  // 👇 IMPORTANTE: Pasamos dbUserName al return para que App.jsx lo use
   return {
     session, userMacros, userRole, initialCalcData, autoRenew, subEndDate,
-    dbUserName, // 👈 NUEVO
-    loadingRole, checkingBiometrics, paymentModal, updateWorkoutPlan,
+    dbUserName, loadingRole, checkingBiometrics, paymentModal, updateWorkoutPlan,
     closePaymentModal, handleCalculationSuccess, handleSimulateUpgrade, 
     handleCancelSubscription, handleReactivateSubscription, handleLogout,
     handleDeleteAccount, loadBiometrics
   };
-} 
+}
