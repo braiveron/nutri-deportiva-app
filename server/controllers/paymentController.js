@@ -18,7 +18,7 @@ const createPreference = async (req, res) => {
 
   try {
     // FORZAMOS LA URL DE VERCEL PARA LA PRUEBA DE REDIRECCIÓN
-    const PRODUCTION_URL = "https://nutri-deportiva-app.vercel.app";
+    const PRODUCTION_URL = "https://nutrisportapp.com.ar";
 
     const preference = new Preference(client);
 
