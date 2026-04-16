@@ -43,8 +43,8 @@ serve(async (req) => {
           external_reference: body.userId,
           notification_url: "https://wmxfwlzbgdypyjdtffbp.supabase.co/functions/v1/mercadopago-webhook",
           back_urls: {
-            success: "https://nutri-deportiva-app.vercel.app/dashboard",
-            failure: "https://nutri-deportiva-app.vercel.app/"
+            success: "https://nutri-deportiva-app.vercel.app/perfil",
+            failure: "https://nutri-deportiva-app.vercel.app/perfil"
           },
           auto_return: "approved"
         })

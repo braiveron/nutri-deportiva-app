@@ -19,7 +19,6 @@ export default function Navbar({
   const location = useLocation();
   const menuRef = useRef(null); 
 
-  // --- LÓGICA DE COLOR ADAPTATIVO ---
   const isWelcomePage = location.pathname === "/bienvenida";
 
   useEffect(() => {
@@ -28,22 +27,18 @@ export default function Navbar({
         setMenuOpen(false);
       }
     };
-
     if (menuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
-
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [menuOpen]);
 
-  // Estilo Navbar Desktop
   const isActive = (path) => location.pathname === path 
     ? "text-sportRed font-bold border-b-2 border-sportRed pb-1" 
     : "text-gray-400 hover:text-white transition-colors pb-1 border-b-2 border-transparent hover:border-gray-700";
 
-  // Estilo Links Móvil (Dropdown)
   const mobileLinkStyle = (path) => `
     block w-full text-left px-4 py-3 text-xs font-black uppercase tracking-widest transition-colors border-l-2
     ${location.pathname === path 
@@ -66,7 +61,6 @@ export default function Navbar({
       
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         
-        {/* LOGO */}
         <div className="flex items-center gap-2">
           <Link to="/bienvenida" className="flex items-center group">
             <h1 className="text-xl md:text-2xl font-black italic tracking-tighter leading-none select-none transition-transform group-hover:scale-105">
@@ -76,7 +70,6 @@ export default function Navbar({
           </Link>
         </div>
 
-        {/* MENU DESKTOP */}
         <div className="hidden md:flex items-center gap-8 text-sm uppercase tracking-widest font-medium">
             <Link to="/perfil" className={isActive('/perfil')}>Perfil</Link>
             <Link to="/cocina" className={isActive('/cocina')}>Cocina</Link>
@@ -84,7 +77,6 @@ export default function Navbar({
             <Link to="/seguimiento" className={isActive('/seguimiento')}>Seguımıento</Link>
         </div>
 
-        {/* USUARIO / DROPDOWN */}
         <div className="relative" ref={menuRef}> 
             <button 
                 onClick={() => setMenuOpen(!menuOpen)}
@@ -105,11 +97,9 @@ export default function Navbar({
                 </div>
             </button>
 
-            {/* MENÚ DESPLEGABLE */}
             {menuOpen && (
                 <div className="absolute right-0 mt-4 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden animate-fade-in py-2 z-50">
                     
-                    {/* SECCIÓN MÓVIL: NAVEGACIÓN */}
                     <div className="md:hidden border-b border-gray-100 pb-2 mb-2">
                         <p className="px-4 py-2 text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">Navegación</p>
                         <Link to="/perfil" onClick={() => setMenuOpen(false)} className={mobileLinkStyle('/perfil')}>Perfil</Link>
@@ -131,7 +121,6 @@ export default function Navbar({
                         </>
                     )}
 
-                    {/* SECCIÓN ESTADO (OCULTA PARA ADMIN) */}
                     {userRole !== 'admin' && (
                         <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
                             <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Estado Suscripción</p>
@@ -157,22 +146,23 @@ export default function Navbar({
                                     )}
                                 </div>
                             ) : (
-                                <button onClick={() => { onSubscribe(); setMenuOpen(false); }} className="w-full bg-sportRed text-white text-[10px] font-black py-2 rounded uppercase tracking-widest hover:bg-red-700 shadow-lg shadow-red-900/20 transform hover:scale-105 transition-all">
-                                    MEJORAR A PRO
-                                </button>
+                                <div className="flex flex-col gap-1.5">
+                                  <button onClick={() => { onSubscribe(); setMenuOpen(false); }} className="w-full bg-sportRed text-white text-[10px] font-black py-2 rounded uppercase tracking-widest hover:bg-red-700 shadow-lg shadow-red-900/20 transform hover:scale-105 transition-all">
+                                      MEJORAR A PRO
+                                  </button>
+                                  <p className="text-center text-[9px] font-black text-gray-400 tracking-tighter">SOLO $9.990 ARS / MES</p>
+                                </div>
                             )}
                         </div>
                     )}
 
-                    {/* MENSAJE ESPECIAL PARA ADMIN */}
                     {userRole === 'admin' && (
                         <div className="px-4 py-3 bg-gray-900 border-b border-gray-800 text-center">
-                             <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">SISTEMA ADMINISTRATIVO</p>
+                             <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">SISTEMA ADMINISTRATIVO</p>
                              <p className="text-[10px] text-white font-bold mt-1">Acceso Total Habilitado</p>
                         </div>
                     )}
 
-                    {/* SECCIÓN CUENTA */}
                     <div className="py-2 border-b border-gray-100">
                         <button 
                             onClick={() => { setMenuOpen(false); onOpenSettings(); }} 
@@ -189,7 +179,6 @@ export default function Navbar({
                         </button>
                     </div>
 
-                    {/* SECCIÓN SALIDA */}
                     <div className="pt-2">
                         <button 
                           onClick={() => { onLogout(); setMenuOpen(false); }} 

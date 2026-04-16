@@ -14,23 +14,19 @@ export default function PremiumLock({ type = "default", userId }) {
     setLoading(true);
 
     try {
-      // CORRECCIÓN 1: URL exacta de la Edge Function (v1/nombre-funcion)
       const urlEdgeFunction = "https://wmxfwlzbgdypyjdtffbp.supabase.co/functions/v1/mercadopago-webhook";
       
       const response = await fetch(urlEdgeFunction, {
         method: "POST",
-        // CORRECCIÓN 2: No incluimos 'Authorization' aquí para evitar errores de CORS 
-        // a menos que sea estrictamente necesario.
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: userId, 
-          planPrice: 100, // Se envía 100 para la prueba
+          planPrice: 9990, // Actualizado al valor real
           planName: `NutriSport PRO - ${type.toUpperCase()}`,
           isActionCreatePreference: true 
         }),
       });
 
-      // CORRECCIÓN 3: Validamos que la respuesta sea OK antes de parsear
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Error en el servidor: ${errorText}`);
@@ -52,12 +48,11 @@ export default function PremiumLock({ type = "default", userId }) {
     }
   };
 
-  // ... (El resto del código de contenido y renderizado se mantiene IGUAL)
   const content = {
-    cocina: { icon: "👨‍🍳", title: "CHEF PERSONAL", description: "Desbloquea recetas inteligentes...", benefits: ["..."] },
-    entreno: { icon: "💪", title: "ENTRENADOR", description: "Obtén rutinas...", benefits: ["..."] },
-    tracker: { icon: "📊", title: "SEGUIMIENTO", description: "El control total...", benefits: ["..."] },
-    default: { icon: "📋", title: "FALTA UN PASO", description: "Necesitamos conocer tus medidas...", benefits: ["..."] }
+    cocina: { icon: "👨‍🍳", title: "CHEF PERSONAL", description: "Desbloquea recetas inteligentes basadas en tus macros y objetivos.", benefits: ["Recetas Personalizadas", "Lista de ingredientes", "Análisis Nutricional", "Tips de Preparacion"] },
+    entreno: { icon: "💪", title: "ENTRENADOR", description: "Obtén rutinas dinámicas que se adaptan a tu progreso y equipo disponible.", benefits: ["Rutinas de Fuerza", "Ajuste segun tu equipo", "Plan de Carga", "Progreso Semanal"] },
+    tracker: { icon: "📊", title: "SEGUIMIENTO", description: "El control total de tu evolución con gráficos detallados y predicciones.", benefits: ["Gráficos de Progreso", "Historial Completo", "Exportar Datos", "Metas Mensuales"] },
+    default: { icon: "📋", title: "FALTA UN PASO", description: "Necesitamos conocer tus medidas y objetivos para activar tu plan.", benefits: ["Evaluación Inicial", "Cálculo de Macros", "Perfil Completo", "Objetivo Fitness"] }
   };
 
   const current = content[type] || content.default;
@@ -88,12 +83,12 @@ export default function PremiumLock({ type = "default", userId }) {
               <button 
                 onClick={handleBtnClick}
                 disabled={loading}
-                className={`w-full ${loading ? 'bg-gray-700 opacity-50' : 'bg-sportRed hover:bg-red-700'} text-white py-3 rounded-sm uppercase font-bold text-base tracking-widest transition-all shadow-[0_0_15px_rgba(220,38,38,0.3)] active:scale-95 cursor-pointer transform ${!loading && 'hover:-translate-y-1'}`}
+                className={`w-full ${loading ? 'bg-gray-700 opacity-50' : 'bg-sportRed hover:bg-red-700'} text-white py-4 rounded-sm uppercase font-black text-base tracking-widest transition-all shadow-[0_0_15px_rgba(220,38,38,0.3)] active:scale-95 cursor-pointer transform ${!loading && 'hover:-translate-y-1'}`}
               >
-                {loading ? "Procesando..." : "Desbloquear Ahora"}
+                {loading ? "Procesando..." : "Desbloquear por $9.990"}
               </button>
-              <span className="text-[9px] text-gray-500 uppercase font-bold tracking-widest mt-1">
-                Pago seguro vía Mercado Pago
+              <span className="text-[9px] text-gray-500 uppercase font-bold tracking-[0.2em] mt-2">
+                Pago único mensual • Seguro vía Mercado Pago
               </span>
           </div>
       </div>

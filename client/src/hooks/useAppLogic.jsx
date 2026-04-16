@@ -160,7 +160,7 @@ export function useAppLogic() {
                         message: modalMsg, 
                         onConfirm: () => {
                             setPaymentModal(prev => ({ ...prev, show: false }));
-                            navigate(location.pathname, { replace: true }); 
+                            navigate("/perfil", { replace: true }); 
                         }
                     });
                 }
