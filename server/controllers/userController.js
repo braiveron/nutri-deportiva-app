@@ -153,13 +153,20 @@ exports.createSupportTicket = async (req, res) => {
 // --- ADMIN ---
 exports.getAllTickets = async (req, res) => {
   try {
+    // Probamos con "support_tickets" pero simplificando el select para evitar fallos de relación
     const { data, error } = await supabase
       .from("support_tickets")
-      .select(`*, profiles (*)`)
+      .select("*")
       .order("created_at", { ascending: false });
-    if (error) throw error;
+
+    if (error) {
+      console.error("Error específico de Supabase:", error);
+      throw error;
+    }
+
     res.json({ success: true, tickets: data });
   } catch (error) {
+    console.error("Error en getAllTickets:", error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 };

@@ -20,7 +20,8 @@ export default function Auth() {
   const [view, setView] = useState('login'); 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
+  const [firstName, setFirstName] = useState('');
+const [lastName, setLastName] = useState('');
   const [errors, setErrors] = useState({ email: '', password: '', general: '' });
   const [successMsg, setSuccessMsg] = useState(''); 
   const [showPassword, setShowPassword] = useState(false);
@@ -82,7 +83,8 @@ export default function Auth() {
         if (error) throw error;
       } else if (view === 'register') {
         const { data, error } = await supabase.auth.signUp({
-          email, password, options: { data: { full_name: fullName } },
+          email, password, options: { data: { first_name: firstName, 
+        last_name: lastName  } },
         });
         if (error) throw error;
         if (data.user && !data.session) {
@@ -145,12 +147,29 @@ export default function Auth() {
 
                 <form onSubmit={handleSubmit} className="space-y-5">
                     {view === 'register' && (
-                        <div>
-                            <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Nombre Completo</label>
-                            <input type="text" placeholder="Tu Nombre" value={fullName} onChange={(e) => setFullName(e.target.value)}
-                                className="w-full bg-gray-50 border border-gray-300 px-4 py-3 font-bold text-gray-900 focus:border-sportRed focus:outline-none transition-colors" />
-                        </div>
-                    )}
+    <div className="grid grid-cols-2 gap-4">
+        <div>
+            <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Nombre</label>
+            <input 
+                type="text" 
+                placeholder="Ej: Juan" 
+                value={firstName} 
+                onChange={(e) => setFirstName(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-300 px-4 py-3 font-bold text-gray-900 focus:border-sportRed focus:outline-none transition-colors" 
+            />
+        </div>
+        <div>
+            <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Apellido</label>
+            <input 
+                type="text" 
+                placeholder="Ej: Pérez" 
+                value={lastName} 
+                onChange={(e) => setLastName(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-300 px-4 py-3 font-bold text-gray-900 focus:border-sportRed focus:outline-none transition-colors" 
+            />
+        </div>
+    </div>
+)}
                     <div>
                         <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Correo Electrónico</label>
                         <input type="email" placeholder="ejemplo@correo.com" value={email} onChange={(e) => setEmail(e.target.value)}
