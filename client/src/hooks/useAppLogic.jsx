@@ -85,24 +85,45 @@ export function useAppLogic() {
 
   // --- 1. GESTIÓN DE SESIÓN ESTABLE (Evita refrescos al cambiar de pestaña) ---
   useEffect(() => {
-    const initSession = async () => {
-      const { data: { session: activeSession } } = await supabase.auth.getSession();
-      setSession(activeSession);
-      if (!activeSession) setCheckingBiometrics(false);
-    };
+  // Dentro de useAppLogic.js -> initSession
+const initSession = async () => {
+  try {
+    const { data: { session: activeSession }, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      // Si hay error de refresh token, forzamos el cierre para limpiar el storage
+      if (error.message.includes("Refresh Token")) {
+          await supabase.auth.signOut();
+          setSession(null);
+      }
+      throw error;
+    }
+
+    setSession(activeSession);
+    if (!activeSession) setCheckingBiometrics(false);
+  } catch (err) {
+    console.error("Error inicializando sesión:", err);
+    setCheckingBiometrics(false);
+  }
+};
 
     initSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
-      // Cambio Crítico: Solo actualiza si el token cambió (evita re-renders por foco de ventana)
-      setSession(prev => (prev?.access_token !== newSession?.access_token ? newSession : prev));
-      
-      if (event === 'SIGNED_OUT') {
-        setCheckingBiometrics(false);
-        setUserMacros(null); setUserRole(null); setInitialCalcData(null); 
-        setAutoRenew(false); setSubEndDate(null); setDbUserName(null);
-      }
-    });
+   // Dentro del useEffect de la sesión
+const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+  // Solo actualiza si realmente hay un cambio de token
+  setSession(prev => (prev?.access_token !== newSession?.access_token ? newSession : prev));
+  
+  if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+    setCheckingBiometrics(false); // <--- Crucial para que no se trabe el loader
+    setUserMacros(null); 
+    setUserRole(null); 
+    setInitialCalcData(null); 
+    setAutoRenew(false); 
+    setSubEndDate(null); 
+    setDbUserName(null);
+  }
+});
 
     return () => {
       if (subscription) subscription.unsubscribe();
