@@ -209,18 +209,18 @@ const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSe
 
 const handleLogout = useCallback(async () => {
   try {
-    // Intentamos el logout normal
-    await supabase.auth.signOut();
-  } catch (error) {
-    console.warn("Error al avisar al servidor, limpiando localmente...", error);
+    // Forzamos el logout con scope 'local' para evitar el 403 del servidor
+    // Esto borra la sesión del cliente actual sin pelearse con el servidor por tokens globales
+    await supabase.auth.signOut({ scope: 'local' }); 
+  } catch {
+    console.warn("Aviso: El servidor no pudo procesar el cierre, procediendo a limpieza local.");
   } finally {
-    // ESTO ES LO IMPORTANTE:
-    // Pase lo que pase, limpiamos el storage y redirigimos
+    // ... (Tu lógica de limpieza de localStorage y navegación que ya armamos)
     const projectHost = new URL(import.meta.env.VITE_SUPABASE_URL).hostname.split('.')[0];
     localStorage.removeItem(`sb-${projectHost}-auth-token`);
     localStorage.removeItem('nutri_temp_data');
     
-    setSession(null); // Limpiamos el estado de React
+    setSession(null); 
     navigate("/", { replace: true });
   }
 }, [navigate]);
