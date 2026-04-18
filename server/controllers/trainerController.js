@@ -17,14 +17,13 @@ const crearEntreno = async (req, res) => {
     // A. Validar Suscripción PRO
     const { data: profile } = await supabaseAdmin
       .from("profiles")
-      .select("subscription_tier")
+      .select("subscription_tier, role")
       .eq("id", userId)
       .single();
 
     if (
       !profile ||
-      (profile.subscription_tier !== "pro" &&
-        profile.subscription_tier !== "admin")
+      (profile.subscription_tier !== "pro" && profile.role !== "admin")
     ) {
       return res.status(403).json({ error: "REQUIERE PLAN PRO" });
     }
