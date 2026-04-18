@@ -207,10 +207,23 @@ const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSe
     }
   }, [session?.user?.id, EDGE_FUNCTION_URL]);
 
-  const handleLogout = useCallback(async () => {
+const handleLogout = useCallback(async () => {
+  try {
+    // Intentamos el logout normal
     await supabase.auth.signOut();
-    navigate("/");
-  }, [navigate]);
+  } catch (error) {
+    console.warn("Error al avisar al servidor, limpiando localmente...", error);
+  } finally {
+    // ESTO ES LO IMPORTANTE:
+    // Pase lo que pase, limpiamos el storage y redirigimos
+    const projectHost = new URL(import.meta.env.VITE_SUPABASE_URL).hostname.split('.')[0];
+    localStorage.removeItem(`sb-${projectHost}-auth-token`);
+    localStorage.removeItem('nutri_temp_data');
+    
+    setSession(null); // Limpiamos el estado de React
+    navigate("/", { replace: true });
+  }
+}, [navigate]);
 
   return {
     session, userMacros, userRole, initialCalcData, autoRenew, subEndDate,
