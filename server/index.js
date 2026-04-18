@@ -18,7 +18,8 @@ app.use(
       if (
         !origin ||
         origin.includes("vercel.app") ||
-        origin.includes("localhost")
+        origin.includes("localhost") ||
+        origin.includes("nutrisportapp.com.ar")
       ) {
         callback(null, true);
       } else {
