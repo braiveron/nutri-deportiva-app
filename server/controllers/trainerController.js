@@ -21,7 +21,11 @@ const crearEntreno = async (req, res) => {
       .eq("id", userId)
       .single();
 
-    if (!profile || profile.subscription_tier !== "pro") {
+    if (
+      !profile ||
+      (profile.subscription_tier !== "pro" &&
+        profile.subscription_tier !== "admin")
+    ) {
       return res.status(403).json({ error: "REQUIERE PLAN PRO" });
     }
 
