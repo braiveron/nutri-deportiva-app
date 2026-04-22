@@ -1,0 +1,17 @@
+{
+  "short_name": "NutriSport",
+  "name": "NutriSport - High Performance",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#E31B23",
+  "background_color": "#0F172A",
+  "orientation": "portrait"
+}
