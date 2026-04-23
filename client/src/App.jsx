@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAppLogic } from "./hooks/useAppLogic"; 
 
@@ -13,12 +13,12 @@ import ChatBot from "./components/ChatBot";
 import InstallPrompt from "./components/InstallPrompt"; // <-- IMPORTADO AQUÍ
 
 // Páginas
-import PerfilPage from "./pages/PerfilPage";
-import CocinaPage from "./pages/CocinaPage";
-import EntrenoPage from "./pages/EntrenoPage";
-import TrackerPage from "./pages/TrackerPage";
-import AdminPage from "./pages/AdminPage";
-import WelcomePage from "./pages/WelcomePage"; 
+const PerfilPage = lazy(() => import("./pages/PerfilPage"));
+const CocinaPage = lazy(() => import("./pages/CocinaPage"));
+const EntrenoPage = lazy(() => import("./pages/EntrenoPage"));
+const TrackerPage = lazy(() => import("./pages/TrackerPage"));
+const AdminPage = lazy(() => import("./pages/AdminPage"));
+const WelcomePage = lazy(() => import("./pages/WelcomePage"));
 
 // --- 🏋️‍♂️ NUEVO COMPONENTE DE CARGA TEMÁTICO ---
 const ThematicLoader = () => {
@@ -141,16 +141,19 @@ function App() {
         subEndDate={subEndDate}
       />
 
-      <main className="flex-1 w-full flex flex-col relative z-10">
-        <Routes>
-          <Route path="/" element={<Navigate to={hasBiometrics ? "/perfil" : "/bienvenida"} replace />} />
-          <Route path="/bienvenida" element={<WelcomePage userName={firstName} />} />
-          <Route path="/perfil" element={<PerfilPage initialData={initialCalcData} userId={session.user.id} onCalcSuccess={handleCalculationSuccess} />} />
-          <Route path="/cocina" element={<CocinaPage macros={userMacros} userId={session.user.id} userRole={userRole} onUnlock={handleSimulateUpgrade} />} />
-          <Route path="/entrenamiento" element={<EntrenoPage initialData={initialCalcData} userId={session.user.id} userRole={userRole} userGoal={initialCalcData?.goal || 'mantener'} onPlanCreated={updateWorkoutPlan} onUnlock={handleSimulateUpgrade} />} />
-          <Route path="/seguimiento" element={<TrackerPage macros={userMacros || initialCalcData} userId={session.user.id} userRole={userRole} onUnlock={handleSimulateUpgrade} onWeightChanged={() => loadBiometrics(session.user.id)} />} />
-          <Route path="/admin" element={<AdminPage userRole={userRole} />} />
-        </Routes>
+<main className="flex-1 w-full flex flex-col relative z-10">
+        {/* Suspense atrapa la carga de las páginas lazy y muestra el loader */}
+        <Suspense fallback={<ThematicLoader />}>
+          <Routes>
+            <Route path="/" element={<Navigate to={hasBiometrics ? "/perfil" : "/bienvenida"} replace />} />
+            <Route path="/bienvenida" element={<WelcomePage userName={firstName} />} />
+            <Route path="/perfil" element={<PerfilPage initialData={initialCalcData} userId={session.user.id} onCalcSuccess={handleCalculationSuccess} />} />
+            <Route path="/cocina" element={<CocinaPage macros={userMacros} userId={session.user.id} userRole={userRole} onUnlock={handleSimulateUpgrade} />} />
+            <Route path="/entrenamiento" element={<EntrenoPage initialData={initialCalcData} userId={session.user.id} userRole={userRole} userGoal={initialCalcData?.goal || 'mantener'} onPlanCreated={updateWorkoutPlan} onUnlock={handleSimulateUpgrade} />} />
+            <Route path="/seguimiento" element={<TrackerPage macros={userMacros || initialCalcData} userId={session.user.id} userRole={userRole} onUnlock={handleSimulateUpgrade} onWeightChanged={() => loadBiometrics(session.user.id)} />} />
+            <Route path="/admin" element={<AdminPage userRole={userRole} />} />
+          </Routes>
+        </Suspense>
       </main>
       
       <Footer userId={session?.user?.id}/>
