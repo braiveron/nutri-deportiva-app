@@ -97,7 +97,7 @@ export default function Auth() {
   };
 
   return (
-    <div className="fixed inset-0 w-screen h-screen bg-gray-900 overflow-y-auto overflow-x-hidden font-sans">
+    <div className="fixed inset-0 w-screen h-screen bg-gray-900 overflow-hidden font-sans">
       
       {/* FONDO ANIMADO CORREGIDO */}
       <div className="fixed inset-0 w-full h-full z-0 overflow-hidden pointer-events-none">
@@ -117,14 +117,14 @@ export default function Auth() {
         <div className="absolute inset-0 bg-black/40"></div>
       </div>
 
-      <div className="relative z-10 min-h-screen flex flex-col md:flex-row items-center justify-around py-12 px-6 md:px-20 lg:px-32">
+      <div className="relative z-10 h-full w-full overflow-y-auto overflow-x-hidden flex flex-col md:flex-row items-center justify-around py-12 px-6 md:px-20 lg:px-32">
         
         <div className="mb-12 md:mb-0 md:text-left text-center max-w-xl flex flex-col gap-6">
             <h1 className="text-6xl md:text-7xl lg:text-8xl font-black italic tracking-tighter leading-none select-none drop-shadow-2xl">
                 <span className="text-white">NUTRI</span><span className="text-sportRed">SPORT</span>
             </h1>
             
-            <div className="relative h-24 md:h-28 overflow-hidden">
+            <div className="relative h-32 md:h-36 overflow-hidden">
                 {MOTIVATIONAL_PHRASES.map((phrase, index) => (
                     <p 
                         key={index}
