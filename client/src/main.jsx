@@ -15,7 +15,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 // --- REGISTRO DEL SERVICE WORKER (Para que la PWA sea instalable) ---
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
+    navigator.serviceWorker.register('/service-worker.js')
       .then(registration => {
         console.log('SW registrado con éxito:', registration.scope);
       })

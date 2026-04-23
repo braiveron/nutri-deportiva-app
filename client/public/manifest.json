@@ -1,5 +1,5 @@
 {
-  "id": "/",
+  "id": "/?v=2",
   "short_name": "NutriSport",
   "name": "NutriSport - High Performance",
   "description": "Tu app de entrenamiento y cocina de alto rendimiento",
@@ -23,7 +23,7 @@
       "purpose": "maskable"
     }
   ],
-  "start_url": "/",
+  "start_url": "/?v=2",
   "display": "standalone",
   "theme_color": "#E31B23",
   "background_color": "#0F172A",
