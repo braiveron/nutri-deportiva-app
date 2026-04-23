@@ -11,8 +11,8 @@ export default function EntrenoPage({ initialData, userId, userRole, onPlanCreat
     // 0️⃣ ESTADO DE PESTAÑAS
     const [activeTab, setActiveTab] = useState('rutina');
 
-    // 🆕 ESTADO PARA TARJETAS DESPLEGABLES (Todos cerrados por defecto)
-    const [expandedDays, setExpandedDays] = useState({}); // 👈 CAMBIO AQUÍ: Objeto vacío
+    // 🆕 ESTADO PARA TARJETAS DESPLEGABLES
+    const [expandedDays, setExpandedDays] = useState({}); 
 
     // 1️⃣ Estado para recargar el historial
     const [refreshHistory, setRefreshHistory] = useState(0);
@@ -47,7 +47,6 @@ export default function EntrenoPage({ initialData, userId, userRole, onPlanCreat
         setCurrentPlan(null);
     };
 
-    // 🆕 Recibe la última rutina desde el Historial
     const handleHistoryLoaded = (latestPlan) => {
         if (latestPlan) {
             console.log("🔄 Sincronizando Registro con última rutina del historial...");
@@ -59,9 +58,15 @@ export default function EntrenoPage({ initialData, userId, userRole, onPlanCreat
         setExpandedDays(prev => ({ ...prev, [index]: !prev[index] }));
     };
 
-    // --- VALIDACIONES ---
-    if (userRole !== 'pro' && userRole !== 'admin') {
-        return <div className="flex flex-col items-center pt-10 px-4 w-full"><PremiumLock onUnlock={onUnlock} type="entreno" userId={userId}/></div>;
+    // --- VALIDACIONES DE ACCESO ---
+    const hasAccess = userRole === 'pro' || userRole === 'admin';
+
+    if (!hasAccess) {
+        return (
+            <div className="flex flex-col items-center pt-10 px-4 w-full">
+                <PremiumLock onUnlock={onUnlock} type="entreno" userId={userId}/>
+            </div>
+        );
     }
 
     if (!localProfile) return <ProfileIncomplete type="entreno"/>;
@@ -125,7 +130,6 @@ export default function EntrenoPage({ initialData, userId, userRole, onPlanCreat
                                 {currentPlan.dias.map((diaPlan, index) => (
                                     <div key={index} className="bg-white rounded-2xl shadow-lg transition-all duration-300 overflow-hidden border border-gray-100 flex flex-col h-fit">
                                         
-                                        {/* CABECERA CLICKABLE */}
                                         <div 
                                             onClick={() => toggleDay(index)}
                                             className="bg-gray-900 p-4 border-l-8 border-sportRed flex justify-between items-center relative overflow-hidden cursor-pointer hover:bg-gray-800 transition-colors"
@@ -144,7 +148,6 @@ export default function EntrenoPage({ initialData, userId, userRole, onPlanCreat
                                             </div>
                                         </div>
 
-                                        {/* DETALLE EJERCICIOS */}
                                         {expandedDays[index] && (
                                             <div className="p-5 space-y-6 bg-gray-50/50 animate-fade-in-down">
                                                 {diaPlan.ejercicios.map((ejercicio, idx) => (

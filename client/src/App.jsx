@@ -10,7 +10,7 @@ import AccountSettingsModal from "./components/AccountSettingsModal";
 import SupportModal from "./components/SupportModal";
 import Footer from "./components/Footer"; 
 import ChatBot from "./components/ChatBot"; 
-import InstallPrompt from "./components/InstallPrompt"; // <-- IMPORTADO AQUÍ
+import InstallPrompt from "./components/InstallPrompt";
 
 // Páginas
 const PerfilPage = lazy(() => import("./pages/PerfilPage"));
@@ -20,7 +20,7 @@ const TrackerPage = lazy(() => import("./pages/TrackerPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const WelcomePage = lazy(() => import("./pages/WelcomePage"));
 
-// --- 🏋️‍♂️ NUEVO COMPONENTE DE CARGA TEMÁTICO ---
+// --- 🏋️‍♂️ COMPONENTE DE CARGA TEMÁTICO ---
 const ThematicLoader = () => {
   const [tick, setTick] = useState(0);
 
@@ -48,7 +48,6 @@ const ThematicLoader = () => {
     const interval = setInterval(() => {
       setTick((prev) => prev + 1);
     }, 800); 
-
     return () => clearInterval(interval);
   }, []);
 
@@ -87,6 +86,7 @@ function App() {
     paymentModal,       
     subEndDate,
     dbUserName,
+    fetchUserProfile,
     loadBiometrics,
     closePaymentModal,
     handleCalculationSuccess, 
@@ -101,7 +101,10 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showSupport, setShowSupport] = useState(false); 
 
-  if (checkingBiometrics && !session) {
+  // --- 🛡️ CORRECCIÓN DE SALTO (INIT LOGIC) ---
+  const isInitializing = checkingBiometrics || loadingRole;
+
+  if (isInitializing) {
       return <ThematicLoader />;
   }
 
@@ -109,9 +112,20 @@ function App() {
     return <Auth />;
   }
 
+  // --- VARIABLES DERIVADAS ---
   const fullName = dbUserName || session.user.user_metadata.full_name || "Usuario";
   const firstName = fullName.split(' ')[0]; 
   const hasBiometrics = initialCalcData && initialCalcData.peso > 0;
+
+  const handleRefreshProStatus = async () => {
+    const userId = session?.user?.id;
+    if (userId) {
+      await Promise.all([
+        loadBiometrics(userId),
+        fetchUserProfile(userId)
+      ]);
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col relative bg-gray-50 text-gray-800 font-sans overflow-x-hidden selection:bg-sportRed selection:text-white">
@@ -141,16 +155,52 @@ function App() {
         subEndDate={subEndDate}
       />
 
-<main className="flex-1 w-full flex flex-col relative z-10">
-        {/* Suspense atrapa la carga de las páginas lazy y muestra el loader */}
+      <main className="flex-1 w-full flex flex-col relative z-10">
         <Suspense fallback={<ThematicLoader />}>
           <Routes>
             <Route path="/" element={<Navigate to={hasBiometrics ? "/perfil" : "/bienvenida"} replace />} />
             <Route path="/bienvenida" element={<WelcomePage userName={firstName} />} />
-            <Route path="/perfil" element={<PerfilPage initialData={initialCalcData} userId={session.user.id} onCalcSuccess={handleCalculationSuccess} />} />
-            <Route path="/cocina" element={<CocinaPage macros={userMacros} userId={session.user.id} userRole={userRole} onUnlock={handleSimulateUpgrade} />} />
-            <Route path="/entrenamiento" element={<EntrenoPage initialData={initialCalcData} userId={session.user.id} userRole={userRole} userGoal={initialCalcData?.goal || 'mantener'} onPlanCreated={updateWorkoutPlan} onUnlock={handleSimulateUpgrade} />} />
-            <Route path="/seguimiento" element={<TrackerPage macros={userMacros || initialCalcData} userId={session.user.id} userRole={userRole} onUnlock={handleSimulateUpgrade} onWeightChanged={() => loadBiometrics(session.user.id)} />} />
+            
+            <Route path="/perfil" element={
+              <PerfilPage 
+                initialData={initialCalcData} 
+                userId={session.user.id} 
+                userRole={userRole}
+                onUpdateUser={handleRefreshProStatus}
+                onCalcSuccess={handleCalculationSuccess} 
+              />
+            } />
+
+            <Route path="/cocina" element={
+              <CocinaPage 
+                macros={userMacros} 
+                userId={session.user.id} 
+                userRole={userRole} 
+                onUnlock={handleRefreshProStatus} 
+              />
+            } />
+
+            <Route path="/entrenamiento" element={
+              <EntrenoPage 
+                initialData={initialCalcData} 
+                userId={session.user.id} 
+                userRole={userRole} 
+                userGoal={initialCalcData?.goal || 'mantener'} 
+                onPlanCreated={updateWorkoutPlan} 
+                onUnlock={handleRefreshProStatus} 
+              />
+            } />
+
+            <Route path="/seguimiento" element={
+              <TrackerPage 
+                macros={userMacros || initialCalcData} 
+                userId={session.user.id} 
+                userRole={userRole} 
+                onUnlock={handleRefreshProStatus} 
+                onWeightChanged={() => loadBiometrics(session.user.id)} 
+              />
+            } />
+
             <Route path="/admin" element={<AdminPage userRole={userRole} />} />
           </Routes>
         </Suspense>
@@ -186,7 +236,6 @@ function App() {
 
       {session && session.user && <ChatBot userId={session.user.id} dbUserName={dbUserName}/>}
 
-      {/* 🚀 COMPONENTE DE INSTALACIÓN AGREGADO AQUÍ */}
       <InstallPrompt />
 
     </div>

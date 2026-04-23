@@ -173,6 +173,35 @@ export const api = {
     return await response.json();
   },
 
+  // --- SISTEMA DE CUPONES ---
+  redeemCoupon: async (userId, couponCode) => {
+    try {
+      const response = await fetch(`${API_URL}/redeem-coupon`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, couponCode }),
+      });
+      return await response.json();
+    } catch (error) {
+      console.error("Error en redeemCoupon:", error);
+      return { success: false, error: "Error de conexión con el servidor" };
+    }
+  },
+
+  createCoupon: async (couponData) => {
+    try {
+      const response = await fetch(`${API_URL}/create-coupon`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(couponData),
+      });
+      return await response.json();
+    } catch (error) {
+      console.error("Error en createCoupon:", error);
+      return { success: false, error: "Error de conexión con el servidor" };
+    }
+  },
+
   // --- TRACKER & OTROS ---
   getDailyLogs: async (userId) => {
     const dateStr = getLocalDate();

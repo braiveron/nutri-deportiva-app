@@ -32,13 +32,10 @@ export default function TrackerPage({ macros, userId, userRole, onUnlock, onWeig
 
   const finalMacros = detectarMacrosReales(macros);
 
-  // 1️⃣ VALIDACIÓN DE DATOS
-  if (activeTab === 'macros' && !finalMacros) {
-      return <ProfileIncomplete type="tracker"/>;
-  }
+  // 1️⃣ VALIDACIÓN DE ROL (Prioridad sobre los datos)
+  const hasAccess = userRole === 'pro' || userRole === 'admin';
 
-  // 2️⃣ VALIDACIÓN DE ROL
-  if (userRole !== 'pro' && userRole !== 'admin') {
+  if (!hasAccess) {
     return (
         <div className="flex flex-col items-center pt-10 animate-fade-in px-4 w-full min-h-screen">
              <PremiumLock onUnlock={onUnlock} type="tracker" userId={userId}/>
@@ -46,11 +43,15 @@ export default function TrackerPage({ macros, userId, userRole, onUnlock, onWeig
     );
   }
 
+  // 2️⃣ VALIDACIÓN DE DATOS (Solo si ya es PRO)
+  if (activeTab === 'macros' && !finalMacros) {
+      return <ProfileIncomplete type="tracker"/>;
+  }
+
   // 3️⃣ CONTENIDO
   return (
     <div className="flex flex-col items-center pt-10 pb-20 px-4 animate-fade-in w-full max-w-7xl mx-auto min-h-screen">
         
-        {/* H1 para SEO (Invisible visualmente) */}
         <h1 className="sr-only">Seguimiento de Nutrición y Entrenamiento - NutriSport</h1>
         
         {/* INTERRUPTOR (TOGGLE) */}
@@ -82,7 +83,7 @@ export default function TrackerPage({ macros, userId, userRole, onUnlock, onWeig
         </div>
 
         {/* CONTENIDO SEGÚN PESTAÑA */}
-        <div className="w-full min-h-[600px]">
+        <div className="w-full min-h-[600px] animate-fade-in">
             {activeTab === 'macros' ? (
                 <MacroTracker userId={userId} userMacros={finalMacros} />
             ) : (

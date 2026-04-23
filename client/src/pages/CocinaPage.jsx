@@ -7,13 +7,15 @@ import ProfileIncomplete from "../components/ProfileIncomplete";
 export default function CocinaPage({ macros, userId, userRole, onUnlock }) {
   const [refreshHistory, setRefreshHistory] = useState(0);
   
-  // 👇 1. ESTADO PARA COMUNICAR BORRADOS
+  // Estado para comunicar borrados entre componentes
   const [deletedRecipeId, setDeletedRecipeId] = useState(null);
 
-  if (!macros) {
+  // Si no hay macros (perfil incompleto), mostramos aviso
+  if (!macros || (macros.calorias === 0)) {
     return <ProfileIncomplete type="cocina" />;
   }
 
+  // Verificación de acceso PRO o ADMIN
   const hasAccess = userRole === 'pro' || userRole === 'admin';
 
   return (
@@ -24,17 +26,21 @@ export default function CocinaPage({ macros, userId, userRole, onUnlock }) {
                macros={macros} 
                userId={userId} 
                onRecipeCreated={() => setRefreshHistory(prev => prev + 1)}
-               deletedRecipeId={deletedRecipeId} // 👈 2. LE PASAMOS LA NOTICIA AL CHEF
+               deletedRecipeId={deletedRecipeId}
            />
            <RecipeHistory 
                 key={refreshHistory} 
                 userId={userId} 
-                onDeleteSuccess={(id) => setDeletedRecipeId(id)} // 👈 3. ESCUCHAMOS EL BORRADO
+                onDeleteSuccess={(id) => setDeletedRecipeId(id)}
            />
          </>
        ) : (
          <div className="flex flex-col items-center w-full">
-             <PremiumLock onUnlock={onUnlock} type="cocina" userId={userId}/>
+             <PremiumLock 
+                onUnlock={onUnlock} 
+                type="cocina" 
+                userId={userId}
+             />
          </div>
        )}
     </div>

@@ -55,4 +55,8 @@ router.get("/admin/tickets", userController.getAllTickets);
 router.post("/admin/resolve", userController.resolveTicket);
 router.post("/admin/claim", userController.claimAdminRole);
 
+// --- RUTAS CUPONES ---
+router.post("/create-coupon", userController.createCoupon); // Privado (usalo vos por ahora)
+router.post("/redeem-coupon", userController.redeemCoupon); // Público para usuarios
+
 module.exports = router;

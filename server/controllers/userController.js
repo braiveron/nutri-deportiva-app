@@ -279,3 +279,100 @@ exports.claimAdminRole = async (req, res) => {
       .json({ success: false, error: "Error interno: " + error.message });
   }
 };
+
+// 1. Para que vos crees cupones (Admin)
+exports.createCoupon = async (req, res) => {
+  const { code, type, value, usage_limit, expires_at } = req.body;
+  try {
+    const { data, error } = await supabase
+      .from("coupons")
+      .insert([
+        {
+          code: code.toUpperCase(),
+          type: type || "free_days",
+          value,
+          usage_limit: usage_limit || 100,
+          expires_at,
+        },
+      ])
+      .select();
+    if (error) throw error;
+    res.json({ success: true, coupon: data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// 2. Para que el usuario canjee (User)
+exports.redeemCoupon = async (req, res) => {
+  const { userId, couponCode } = req.body;
+  try {
+    const { data: coupon, error: couponError } = await supabase
+      .from("coupons")
+      .select("*")
+      .eq("code", couponCode.toUpperCase())
+      .single();
+
+    if (couponError || !coupon)
+      return res
+        .status(404)
+        .json({ success: false, error: "Cupón no válido ❌" });
+
+    // Validaciones
+    if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) {
+      return res
+        .status(400)
+        .json({ success: false, error: "El cupón ha expirado ⏰" });
+    }
+    if (coupon.usage_count >= coupon.usage_limit) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Cupón agotado 🛑" });
+    }
+
+    // Verificar si el usuario ya lo usó
+    const { data: alreadyUsed } = await supabase
+      .from("coupon_usage")
+      .select("*")
+      .eq("coupon_id", coupon.id)
+      .eq("user_id", userId)
+      .single();
+
+    if (alreadyUsed)
+      return res
+        .status(400)
+        .json({ success: false, error: "Ya usaste este cupón ✋" });
+
+    // Aplicar beneficio (Días Gratis)
+    if (coupon.type === "free_days") {
+      const fechaVencimiento = new Date();
+      fechaVencimiento.setDate(fechaVencimiento.getDate() + coupon.value);
+
+      await supabase
+        .from("profiles")
+        .update({
+          subscription_tier: "pro",
+          subscription_status: "active",
+          subscription_end_date: fechaVencimiento.toISOString(),
+          updated_at: new Date(),
+        })
+        .eq("id", userId);
+    }
+
+    // Registrar uso
+    await supabase
+      .from("coupon_usage")
+      .insert([{ coupon_id: coupon.id, user_id: userId }]);
+    await supabase
+      .from("coupons")
+      .update({ usage_count: coupon.usage_count + 1 })
+      .eq("id", coupon.id);
+
+    res.json({
+      success: true,
+      message: `¡Activado! +${coupon.value} días PRO 🚀`,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};

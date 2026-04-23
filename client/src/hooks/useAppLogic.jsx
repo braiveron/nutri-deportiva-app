@@ -11,8 +11,8 @@ export function useAppLogic() {
   const [autoRenew, setAutoRenew] = useState(false);
   const [subEndDate, setSubEndDate] = useState(null);
   const [dbUserName, setDbUserName] = useState(null);
-  const [loadingRole, setLoadingRole] = useState(false);
-  const [checkingBiometrics, setCheckingBiometrics] = useState(false);
+  const [loadingRole, setLoadingRole] = useState(true);
+  const [checkingBiometrics, setCheckingBiometrics] = useState(true);
   const [paymentModal, setPaymentModal] = useState({ 
       show: false, type: 'success', title: '', message: '', onConfirm: null 
   });
@@ -192,6 +192,13 @@ const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSe
   }, [location.search, session?.user?.id, navigate, fetchUserProfile, EDGE_FUNCTION_URL]);
 
   // --- HANDLERS ---
+const refreshUserStatus = useCallback(async () => {
+    const userId = session?.user?.id;
+    if (userId) {
+        await fetchUserProfile(userId); // Esto actualizará userRole, subEndDate, etc.
+    }
+}, [session?.user?.id, fetchUserProfile]);
+
   const handleCalculationSuccess = useCallback(async (plan) => {
     setUserMacros(plan);
     const userId = session?.user?.id;
@@ -236,7 +243,7 @@ const handleLogout = useCallback(async () => {
   return {
     session, userMacros, userRole, initialCalcData, autoRenew, subEndDate,
     dbUserName, loadingRole, checkingBiometrics, paymentModal,
-    setPaymentModal, 
+    setPaymentModal, refreshUserStatus, fetchUserProfile,
     handleCalculationSuccess, handleSimulateUpgrade, handleLogout, loadBiometrics
   };
 }
