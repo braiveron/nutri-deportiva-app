@@ -1,16 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import bg1 from '../assets/bg1.jpg';
+import bg2 from '../assets/bg2.jpg';
+import bg3 from '../assets/bg3.jpg';
+import bg4 from '../assets/bg4.jpg';
 
-// Usamos las rutas locales de los archivos que optimizaste
-const BACKGROUND_IMAGES = [
-  "/nutri-area-app/client/src/assets/bg1.jpg",
-
-  "/nutri-area-app/client/src/assets/bg2.jpg",
-
-  "/nutri-area-app/client/src/assets/bg3.jpg",
-
-  "/nutri-area-app/client/src/assets/bg4.jpg"
-];
+const BACKGROUND_IMAGES = [bg1, bg2, bg3, bg4];
 
 export default function WelcomePage({ userName }) {
   const navigate = useNavigate();
@@ -36,6 +31,7 @@ export default function WelcomePage({ userName }) {
               key={BACKGROUND_IMAGES[currentImageIndex]} // La key fuerza el refresco de la animación
               src={BACKGROUND_IMAGES[currentImageIndex]} 
               alt="gym background" 
+              loading="eager"
               className="w-full h-full object-cover grayscale brightness-[0.4] animate-fade-in scale-105" 
             />
           </div>
