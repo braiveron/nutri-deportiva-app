@@ -152,20 +152,20 @@ export default function MacroTracker({ userId, userMacros }) {
             {loading ? (
                 <div className="flex-1 flex flex-col items-center justify-center opacity-50">
                     <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-sportRed mb-4"></div>
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest animate-pulse">Calculando...</p>
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest animate-pulse">Calculando...</p>
                 </div>
             ) : (
                 <div className="animate-fade-in space-y-8">
                     
                     {/* Contador */}
                     <div className="text-center p-4 bg-gray-50 rounded-xl border border-gray-100">
-                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Calorías Diarias</span>
+                        <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Calorías Diarias</span>
                         <div className="flex items-baseline justify-center gap-1 mt-1">
                             {/* 👇 CAMBIO 1: Eliminado Math.round() */}
                             <span className="text-4xl font-bold text-sportDark">{consumed.calories}</span>
-                            <span className="text-gray-400 font-medium">/ {userMacros?.calories || '?'}</span>
+                            <span className="text-gray-500 font-medium">/ {userMacros?.calories || '?'}</span>
                         </div>
-                        <div className="text-[10px] text-gray-400 font-bold uppercase mt-1">kcal consumidas</div>
+                        <div className="text-[10px] text-gray-500 font-bold uppercase mt-1">kcal consumidas</div>
                     </div>
 
                     {/* Barras */}
@@ -184,7 +184,7 @@ export default function MacroTracker({ userId, userMacros }) {
             
             {/* INPUT */}
             <div className="bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-inner">
-                <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">¿Qué comiste hoy?</h4>
+                <h4 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4">¿Qué comiste hoy?</h4>
                 {!previewData ? (
                     <form onSubmit={handleAnalyze} className="flex gap-2">
                         <input 
@@ -218,7 +218,7 @@ export default function MacroTracker({ userId, userMacros }) {
 
             {/* LISTA DE COMIDAS */}
             <div className="min-h-[200px]">
-                 <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 pl-2">Historial de Hoy</h4>
+                 <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 pl-2">Historial de Hoy</h4>
                  
                  {loading ? (
                      <div className="flex justify-center py-10 opacity-50">
@@ -227,7 +227,7 @@ export default function MacroTracker({ userId, userMacros }) {
                  ) : (
                      <div className="space-y-3 animate-fade-in">
                         {logs.length === 0 ? (
-                            <div className="text-center py-8 text-gray-400 italic text-sm border-2 border-dashed border-gray-100 rounded-xl">
+                            <div className="text-center py-8 text-gray-500 italic text-sm border-2 border-dashed border-gray-100 rounded-xl">
                                 No hay comidas registradas hoy.
                             </div>
                         ) : (
@@ -275,7 +275,7 @@ function MacroCard({ label, current, target, color, unit }) {
         <div className="flex flex-col">
             <div className="flex justify-between mb-1">
                 <span className="text-sm font-bold text-gray-600">{label}</span>
-                <span className="text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100">
+                <span className="text-[10px] font-bold text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100">
                     {remaining} {unit} restantes
                 </span>
             </div>
@@ -284,7 +284,7 @@ function MacroCard({ label, current, target, color, unit }) {
                 <div className={`h-full ${color} transition-all duration-1000 ease-out`} style={{ width: `${percent}%` }}></div>
             </div>
             
-            <div className="flex justify-between text-[10px] uppercase font-bold text-gray-400 tracking-wider">
+            <div className="flex justify-between text-[10px] uppercase font-bold text-gray-500 tracking-wider">
                 {/* Aquí mostramos el valor EXACTO actual */}
                 <span>{current} {unit}</span>
                 <span>{safeTarget} {unit}</span>

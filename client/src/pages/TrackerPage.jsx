@@ -2,7 +2,7 @@ import { useState } from "react";
 import MacroTracker from "../components/MacroTracker";
 import WeightTracker from "../components/WeightTracker"; 
 import PremiumLock from "../components/PremiumLock";
-import ProfileIncomplete from "../components/ProfileIncomplete"; // 👈 IMPORTAR
+import ProfileIncomplete from "../components/ProfileIncomplete";
 
 export default function TrackerPage({ macros, userId, userRole, onUnlock, onWeightChanged }) {
   const [activeTab, setActiveTab] = useState('macros');
@@ -32,28 +32,30 @@ export default function TrackerPage({ macros, userId, userRole, onUnlock, onWeig
 
   const finalMacros = detectarMacrosReales(macros);
 
-  // 1️⃣ PRIMERO: VALIDACIÓN DE DATOS (CRÍTICO: ESTO VA ANTES QUE EL CANDADO)
-  // Si intenta ver "Diario" pero no tiene macros calculados -> Perfil Incompleto
+  // 1️⃣ VALIDACIÓN DE DATOS
   if (activeTab === 'macros' && !finalMacros) {
       return <ProfileIncomplete type="tracker"/>;
   }
 
-  // 2️⃣ SEGUNDO: VALIDACIÓN DE ROL
+  // 2️⃣ VALIDACIÓN DE ROL
   if (userRole !== 'pro' && userRole !== 'admin') {
     return (
-        <div className="flex flex-col items-center pt-10 animate-fade-in px-4 w-full">
+        <div className="flex flex-col items-center pt-10 animate-fade-in px-4 w-full min-h-screen">
              <PremiumLock onUnlock={onUnlock} type="tracker" userId={userId}/>
         </div>
     );
   }
 
-  // 3️⃣ TERCERO: CONTENIDO
+  // 3️⃣ CONTENIDO
   return (
-    <div className="flex flex-col items-center pt-10 pb-20 px-4 animate-fade-in w-full max-w-7xl mx-auto">
+    <div className="flex flex-col items-center pt-10 pb-20 px-4 animate-fade-in w-full max-w-7xl mx-auto min-h-screen">
+        
+        {/* H1 para SEO (Invisible visualmente) */}
+        <h1 className="sr-only">Seguimiento de Nutrición y Entrenamiento - NutriSport</h1>
         
         {/* INTERRUPTOR (TOGGLE) */}
         <div className="mb-8">
-            <div className="flex bg-gray-200 p-1 rounded-full relative">
+            <div className="flex bg-gray-300 p-1 rounded-full relative">
                 <div 
                     className={`absolute top-1 bottom-1 w-[50%] bg-white rounded-full shadow-sm transition-all duration-300 ease-out ${
                         activeTab === 'macros' ? 'left-1' : 'left-[49%]'
@@ -63,7 +65,7 @@ export default function TrackerPage({ macros, userId, userRole, onUnlock, onWeig
                 <button 
                     onClick={() => setActiveTab('macros')}
                     className={`relative z-10 px-6 py-2 w-32 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
-                        activeTab === 'macros' ? 'text-sportRed' : 'text-gray-500 hover:text-gray-700'
+                        activeTab === 'macros' ? 'text-sportRed' : 'text-gray-700 hover:text-black'
                     }`}
                 >
                     Diario
@@ -71,7 +73,7 @@ export default function TrackerPage({ macros, userId, userRole, onUnlock, onWeig
                 <button 
                     onClick={() => setActiveTab('weight')}
                     className={`relative z-10 px-6 py-2 w-32 rounded-full text-xs font-bold uppercase tracking-widest transition-colors ${
-                        activeTab === 'weight' ? 'text-sportRed' : 'text-gray-500 hover:text-gray-700'
+                        activeTab === 'weight' ? 'text-sportRed' : 'text-gray-700 hover:text-black'
                     }`}
                 >
                     Peso
@@ -80,7 +82,7 @@ export default function TrackerPage({ macros, userId, userRole, onUnlock, onWeig
         </div>
 
         {/* CONTENIDO SEGÚN PESTAÑA */}
-        <div className="w-full">
+        <div className="w-full min-h-[600px]">
             {activeTab === 'macros' ? (
                 <MacroTracker userId={userId} userMacros={finalMacros} />
             ) : (
