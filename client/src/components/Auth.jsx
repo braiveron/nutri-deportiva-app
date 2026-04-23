@@ -20,7 +20,7 @@ export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
-const [lastName, setLastName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [errors, setErrors] = useState({ email: '', password: '', general: '' });
   const [successMsg, setSuccessMsg] = useState(''); 
   const [showPassword, setShowPassword] = useState(false);
@@ -36,7 +36,6 @@ const [lastName, setLastName] = useState('');
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
-      // Usamos el origen actual (localhost o vercel) para la redirección
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { 
@@ -82,8 +81,7 @@ const [lastName, setLastName] = useState('');
         if (error) throw error;
       } else if (view === 'register') {
         const { data, error } = await supabase.auth.signUp({
-          email, password, options: { data: { first_name: firstName, 
-        last_name: lastName  } },
+          email, password, options: { data: { first_name: firstName, last_name: lastName } },
         });
         if (error) throw error;
         if (data.user && !data.session) {
@@ -100,16 +98,24 @@ const [lastName, setLastName] = useState('');
 
   return (
     <div className="fixed inset-0 w-screen h-screen bg-gray-900 overflow-y-auto overflow-x-hidden font-sans">
-      <div className="absolute inset-0 w-full h-full transition-all duration-1000 opacity-40 scale-100">
-        <img 
-            key={BACKGROUND_IMAGES[currentImageIndex]}
-            src={BACKGROUND_IMAGES[currentImageIndex]} 
-            className="w-full h-full object-cover grayscale brightness-75 animate-fade-in" 
-            alt="bg" 
-            loading="eager" 
-        />
-    </div>
-    <div className="absolute inset-0 bg-black/40"></div>
+      
+      {/* FONDO ANIMADO CORREGIDO */}
+      <div className="fixed inset-0 w-full h-full z-0 overflow-hidden pointer-events-none">
+        {BACKGROUND_IMAGES.map((img, index) => (
+          <div 
+            key={index} 
+            className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out
+              ${index === currentImageIndex ? 'opacity-40 scale-100' : 'opacity-0 scale-105'}`}
+          >
+            <img 
+              src={img} 
+              className="w-full h-full object-cover grayscale brightness-75" 
+              alt="background" 
+            />
+          </div>
+        ))}
+        <div className="absolute inset-0 bg-black/40"></div>
+      </div>
 
       <div className="relative z-10 min-h-screen flex flex-col md:flex-row items-center justify-around py-12 px-6 md:px-20 lg:px-32">
         
@@ -148,29 +154,29 @@ const [lastName, setLastName] = useState('');
 
                 <form onSubmit={handleSubmit} className="space-y-5">
                     {view === 'register' && (
-    <div className="grid grid-cols-2 gap-4">
-        <div>
-            <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Nombre</label>
-            <input 
-                type="text" 
-                placeholder="Ej: Juan" 
-                value={firstName} 
-                onChange={(e) => setFirstName(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-300 px-4 py-3 font-bold text-gray-900 focus:border-sportRed focus:outline-none transition-colors" 
-            />
-        </div>
-        <div>
-            <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Apellido</label>
-            <input 
-                type="text" 
-                placeholder="Ej: Pérez" 
-                value={lastName} 
-                onChange={(e) => setLastName(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-300 px-4 py-3 font-bold text-gray-900 focus:border-sportRed focus:outline-none transition-colors" 
-            />
-        </div>
-    </div>
-)}
+                      <div className="grid grid-cols-2 gap-4">
+                          <div>
+                              <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Nombre</label>
+                              <input 
+                                  type="text" 
+                                  placeholder="Ej: Juan" 
+                                  value={firstName} 
+                                  onChange={(e) => setFirstName(e.target.value)}
+                                  className="w-full bg-gray-50 border border-gray-300 px-4 py-3 font-bold text-gray-900 focus:border-sportRed focus:outline-none transition-colors" 
+                              />
+                          </div>
+                          <div>
+                              <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Apellido</label>
+                              <input 
+                                  type="text" 
+                                  placeholder="Ej: Pérez" 
+                                  value={lastName} 
+                                  onChange={(e) => setLastName(e.target.value)}
+                                  className="w-full bg-gray-50 border border-gray-300 px-4 py-3 font-bold text-gray-900 focus:border-sportRed focus:outline-none transition-colors" 
+                              />
+                          </div>
+                      </div>
+                    )}
                     <div>
                         <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Correo Electrónico</label>
                         <input type="email" placeholder="ejemplo@correo.com" value={email} onChange={(e) => setEmail(e.target.value)}
