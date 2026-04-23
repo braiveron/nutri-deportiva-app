@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 export default function InstallPrompt() {
   const [data, setData] = useState({ s: false, p: '' });
 
-  useEffect(() => {
+/*   useEffect(() => {
     const win = window;
     const isS = win.matchMedia('(display-mode: standalone)').matches || win.navigator.standalone;
     
@@ -26,7 +26,19 @@ export default function InstallPrompt() {
       win.addEventListener('beforeinstallprompt', h);
       return () => win.removeEventListener('beforeinstallprompt', h);
     }
-  }, []);
+  }, []); */
+
+  useEffect(() => {
+  // COMENTÁ TODO LO DEMÁS TEMPORALMENTE Y PONÉ ESTO:
+  setData({ s: true, p: 'android' }); 
+
+  /* const handler = (e) => {
+    e.preventDefault();
+    deferredPrompt.current = e;
+    ...
+  };
+  */
+}, []);
 
   if (!data.s) return null;
 
