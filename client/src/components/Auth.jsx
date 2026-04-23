@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase'; 
+import bg1 from '../assets/bg1.jpg';
+import bg2 from '../assets/bg2.jpg';
+import bg3 from '../assets/bg3.jpg';
+import bg4 from '../assets/bg4.jpg';
 
-const BACKGROUND_IMAGES = [
-  "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=2070&auto=format&fit=crop", 
-  "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=2053&auto=format&fit=crop", 
-  "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?q=80&w=2070&auto=format&fit=crop", 
-  "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?q=80&w=2070&auto=format&fit=crop",
-];
+const BACKGROUND_IMAGES = [bg1, bg2, bg3, bg4];
 
 const MOTIVATIONAL_PHRASES = [
   "El único entrenamiento malo es el que no ocurrió.",
@@ -101,14 +100,16 @@ const [lastName, setLastName] = useState('');
 
   return (
     <div className="fixed inset-0 w-screen h-screen bg-gray-900 overflow-y-auto overflow-x-hidden font-sans">
-      <div className="fixed inset-0 w-full h-full z-0 pointer-events-none">
-          {BACKGROUND_IMAGES.map((img, index) => (
-              <div key={index} className={`absolute inset-0 w-full h-full transition-all duration-1000 ${index === currentImageIndex ? 'opacity-40 scale-100' : 'opacity-0 scale-110'}`}>
-                <img src={img} className="w-full h-full object-cover grayscale brightness-75" alt="bg" />
-              </div>
-          ))}
-          <div className="absolute inset-0 bg-black/40"></div>
-      </div>
+      <div className="absolute inset-0 w-full h-full transition-all duration-1000 opacity-40 scale-100">
+        <img 
+            key={BACKGROUND_IMAGES[currentImageIndex]}
+            src={BACKGROUND_IMAGES[currentImageIndex]} 
+            className="w-full h-full object-cover grayscale brightness-75 animate-fade-in" 
+            alt="bg" 
+            loading="eager" 
+        />
+    </div>
+    <div className="absolute inset-0 bg-black/40"></div>
 
       <div className="relative z-10 min-h-screen flex flex-col md:flex-row items-center justify-around py-12 px-6 md:px-20 lg:px-32">
         
