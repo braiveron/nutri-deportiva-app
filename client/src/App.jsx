@@ -101,7 +101,7 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showSupport, setShowSupport] = useState(false); 
 
-  if (checkingBiometrics) {
+  if (checkingBiometrics && !session) {
       return <ThematicLoader />;
   }
 

@@ -80,6 +80,8 @@ export default function Navbar({
         <div className="relative" ref={menuRef}> 
             <button 
                 onClick={() => setMenuOpen(!menuOpen)}
+                aria-label="Abrir menú de usuario"
+                aria-expanded={menuOpen}
                 className="flex items-center gap-3 hover:opacity-80 transition-opacity group"
             >
                 <div className="text-right hidden md:block">

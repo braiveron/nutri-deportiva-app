@@ -81,6 +81,7 @@ export default function InstallPrompt() {
             ) : (
               <button 
                 onClick={handleInstallClick}
+                aria-label="Cerrar aviso de instalación"
                 className="w-full bg-[#E31B23] text-white font-bold py-2 px-3 rounded uppercase tracking-wider hover:bg-red-700 transition-colors"
               >
                 Instalar ahora

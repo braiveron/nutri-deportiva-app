@@ -12,7 +12,7 @@ export function useAppLogic() {
   const [subEndDate, setSubEndDate] = useState(null);
   const [dbUserName, setDbUserName] = useState(null);
   const [loadingRole, setLoadingRole] = useState(false);
-  const [checkingBiometrics, setCheckingBiometrics] = useState(true);
+  const [checkingBiometrics, setCheckingBiometrics] = useState(false);
   const [paymentModal, setPaymentModal] = useState({ 
       show: false, type: 'success', title: '', message: '', onConfirm: null 
   });
@@ -130,15 +130,23 @@ const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSe
     };
   }, []);
 
-  // --- 2. CARGA DE DATOS (Dependencia de ID, no del objeto session) ---
+// --- 2. CARGA DE DATOS OPTIMIZADA ---
   useEffect(() => {
     const userId = session?.user?.id;
     if (userId) {
-       setCheckingBiometrics(true);
-       Promise.all([fetchUserProfile(userId), loadBiometrics(userId)])
-         .finally(() => setCheckingBiometrics(false));
+        // Quitamos el setCheckingBiometrics(true) de aquí para que no bloquee.
+        // Solo bloquearemos si es ESTRICTAMENTE necesario (ej: primera vez).
+        
+        Promise.all([fetchUserProfile(userId), loadBiometrics(userId)])
+          .finally(() => {
+            // Solo apagamos el loader inicial si estaba encendido
+            setCheckingBiometrics(false); 
+          });
+    } else {
+      // Si no hay sesión, nos aseguramos de apagar el loader para mostrar Auth
+      setCheckingBiometrics(false);
     }
-  }, [session?.user?.id, fetchUserProfile, loadBiometrics]); 
+  }, [session?.user?.id, fetchUserProfile, loadBiometrics]);
 
   // --- 3. PROCESAR MERCADO PAGO ---
   useEffect(() => {

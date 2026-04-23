@@ -145,7 +145,7 @@ export default function ChatBot({ userId, dbUserName }) {
                         </span>
                     </div>
                 </div>
-                <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-white p-1">✕</button>
+                <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-white p-1" aria-label="Cerrar chat">✕</button>
             </div>
 
             {/* Mensajes */}
@@ -191,6 +191,7 @@ export default function ChatBot({ userId, dbUserName }) {
                 <button 
                     onClick={handleSend}
                     disabled={loading || !input.trim()}
+                    aria-label="Enviar mensaje"
                     className="absolute right-4 bg-sportRed text-white p-2 rounded-full hover:bg-red-700 disabled:opacity-50 flex items-center justify-center shadow-md"
                 >
                     <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 transform rotate-90 translate-x-[1px]">
@@ -204,6 +205,7 @@ export default function ChatBot({ userId, dbUserName }) {
       {/* Botón Flotante */}
       <button 
         onClick={() => setIsOpen(!isOpen)}
+        aria-label={isOpen ? "Cerrar asistente" : "Abrir asistente de Nutri-Coach"}
         className={`${isOpen ? 'bg-gray-800 rotate-90' : 'bg-sportRed'} hover:scale-110 text-white p-4 rounded-full shadow-xl transition-all duration-300 flex items-center justify-center ring-4 ring-white z-[110]`}
       >
         {isOpen ? (
