@@ -38,12 +38,18 @@ export function useAppLogic() {
       }
     } catch (error) {
       console.error("Error cargando biometría:", error);
+    } finally {
+      // Aseguramos que el estado de biometría no trabe el inicio
+      setCheckingBiometrics(false);
     }
   }, []);
 
-  // --- CARGA DE PERFIL (nombre, apellido en minúsculas como en tu BD) ---
+  // --- CARGA DE PERFIL ---
   const fetchUserProfile = useCallback(async (userId) => {
-    if (!userId) return null;
+    if (!userId) {
+      setLoadingRole(false);
+      return null;
+    }
     setLoadingRole(true);
     try {
       const { data, error } = await supabase
@@ -58,12 +64,9 @@ export function useAppLogic() {
         setSubEndDate(data.subscription_end_date);
         setAutoRenew(data.auto_renew);
         
-        // CORRECCIÓN: Nombres de columnas según tu BD (nombre, apellido)
         const nombreExistente = data.nombre || "";
         const apellidoExistente = data.apellido || "";
         const fullName = `${nombreExistente} ${apellidoExistente}`.trim();
-        
-        // Seteamos el nombre completo o null si está vacío
         setDbUserName(fullName || null);
 
         if (data.role === 'admin') {
@@ -83,72 +86,85 @@ export function useAppLogic() {
     return null;
   }, []);
 
-  // --- 1. GESTIÓN DE SESIÓN ESTABLE (Evita refrescos al cambiar de pestaña) ---
+  // --- 1. GESTIÓN DE SESIÓN ---
   useEffect(() => {
-  // Dentro de useAppLogic.js -> initSession
-const initSession = async () => {
-  try {
-    const { data: { session: activeSession }, error } = await supabase.auth.getSession();
-    
-    if (error) {
-      // Si hay error de refresh token, forzamos el cierre para limpiar el storage
-      if (error.message.includes("Refresh Token")) {
-          await supabase.auth.signOut();
-          setSession(null);
-      }
-      throw error;
-    }
+    const initSession = async () => {
+      try {
+        const { data: { session: activeSession }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          if (error.message.includes("Refresh Token")) {
+              await supabase.auth.signOut();
+              setSession(null);
+          }
+          throw error;
+        }
 
-    setSession(activeSession);
-    if (!activeSession) setCheckingBiometrics(false);
-  } catch (err) {
-    console.error("Error inicializando sesión:", err);
-    setCheckingBiometrics(false);
-  }
-};
+        setSession(activeSession);
+      } catch (err) {
+        console.error("Error inicializando sesión:", err);
+      } finally {
+        // Si no hay sesión, matamos el loader aquí
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) setCheckingBiometrics(false);
+      }
+    };
 
     initSession();
 
-   // Dentro del useEffect de la sesión
-const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
-  // Solo actualiza si realmente hay un cambio de token
-  setSession(prev => (prev?.access_token !== newSession?.access_token ? newSession : prev));
-  
-  if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
-    setCheckingBiometrics(false); // <--- Crucial para que no se trabe el loader
-    setUserMacros(null); 
-    setUserRole(null); 
-    setInitialCalcData(null); 
-    setAutoRenew(false); 
-    setSubEndDate(null); 
-    setDbUserName(null);
-  }
-});
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      setSession(prev => (prev?.access_token !== newSession?.access_token ? newSession : prev));
+      
+      if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+        setCheckingBiometrics(false); 
+        setLoadingRole(false);
+        setUserMacros(null); 
+        setUserRole(null); 
+        setInitialCalcData(null); 
+        setAutoRenew(false); 
+        setSubEndDate(null); 
+        setDbUserName(null);
+      }
+    });
 
     return () => {
       if (subscription) subscription.unsubscribe();
     };
   }, []);
 
-// --- 2. CARGA DE DATOS OPTIMIZADA ---
+  // --- 2. CARGA DE DATOS ---
   useEffect(() => {
     const userId = session?.user?.id;
     if (userId) {
-        // Quitamos el setCheckingBiometrics(true) de aquí para que no bloquee.
-        // Solo bloquearemos si es ESTRICTAMENTE necesario (ej: primera vez).
-        
+        // El finally de Promise.all asegura que el loader se apague
         Promise.all([fetchUserProfile(userId), loadBiometrics(userId)])
           .finally(() => {
-            // Solo apagamos el loader inicial si estaba encendido
             setCheckingBiometrics(false); 
+            setLoadingRole(false);
           });
     } else {
-      // Si no hay sesión, nos aseguramos de apagar el loader para mostrar Auth
-      setCheckingBiometrics(false);
+      // Si no hay sesión tras el intento de init, liberamos loader
+      if (session === null) {
+         const timer = setTimeout(() => setCheckingBiometrics(false), 1000);
+         return () => clearTimeout(timer);
+      }
     }
   }, [session?.user?.id, fetchUserProfile, loadBiometrics]);
 
-  // --- 3. PROCESAR MERCADO PAGO ---
+  // --- 3. GUARDIA DE EMERGENCIA (Anti-Spinner Infinito) ---
+  useEffect(() => {
+    const criticalTimeout = setTimeout(() => {
+      if (checkingBiometrics || loadingRole) {
+        console.warn("Forzando desbloqueo de interfaz por timeout de red.");
+        setCheckingBiometrics(false);
+        setLoadingRole(false);
+      }
+    }, 10000); // 10 segundos máximo de espera
+
+    return () => clearTimeout(criticalTimeout);
+  }, [checkingBiometrics, loadingRole]);
+
+  // --- 4. PROCESAR MERCADO PAGO ---
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const status = params.get("collection_status");
@@ -192,12 +208,12 @@ const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSe
   }, [location.search, session?.user?.id, navigate, fetchUserProfile, EDGE_FUNCTION_URL]);
 
   // --- HANDLERS ---
-const refreshUserStatus = useCallback(async () => {
+  const refreshUserStatus = useCallback(async () => {
     const userId = session?.user?.id;
     if (userId) {
-        await fetchUserProfile(userId); // Esto actualizará userRole, subEndDate, etc.
+        await fetchUserProfile(userId);
     }
-}, [session?.user?.id, fetchUserProfile]);
+  }, [session?.user?.id, fetchUserProfile]);
 
   const handleCalculationSuccess = useCallback(async (plan) => {
     setUserMacros(plan);
@@ -222,23 +238,19 @@ const refreshUserStatus = useCallback(async () => {
     }
   }, [session?.user?.id, EDGE_FUNCTION_URL]);
 
-const handleLogout = useCallback(async () => {
-  try {
-    // Forzamos el logout con scope 'local' para evitar el 403 del servidor
-    // Esto borra la sesión del cliente actual sin pelearse con el servidor por tokens globales
-    await supabase.auth.signOut({ scope: 'local' }); 
-  } catch {
-    console.warn("Aviso: El servidor no pudo procesar el cierre, procediendo a limpieza local.");
-  } finally {
-    // ... (Tu lógica de limpieza de localStorage y navegación que ya armamos)
-    const projectHost = new URL(import.meta.env.VITE_SUPABASE_URL).hostname.split('.')[0];
-    localStorage.removeItem(`sb-${projectHost}-auth-token`);
-    localStorage.removeItem('nutri_temp_data');
-    
-    setSession(null); 
-    navigate("/", { replace: true });
-  }
-}, [navigate]);
+  const handleLogout = useCallback(async () => {
+    try {
+      await supabase.auth.signOut({ scope: 'local' }); 
+    } catch {
+      console.warn("Limpieza local.");
+    } finally {
+      const projectHost = new URL(import.meta.env.VITE_SUPABASE_URL).hostname.split('.')[0];
+      localStorage.removeItem(`sb-${projectHost}-auth-token`);
+      localStorage.removeItem('nutri_temp_data');
+      setSession(null); 
+      navigate("/", { replace: true });
+    }
+  }, [navigate]);
 
   return {
     session, userMacros, userRole, initialCalcData, autoRenew, subEndDate,
