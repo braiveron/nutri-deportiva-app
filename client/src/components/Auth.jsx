@@ -97,10 +97,11 @@ export default function Auth() {
   };
 
   return (
-    <div className="fixed inset-0 w-screen h-screen bg-gray-900 overflow-hidden font-sans">
+    /* CORRECCIÓN: Usamos relative y min-h-screen con overflow-y-auto para permitir scroll en móviles */
+    <div className="relative min-h-screen w-full bg-gray-900 overflow-y-auto overflow-x-hidden font-sans">
       
-      {/* FONDO ANIMADO CORREGIDO */}
-      <div className="fixed inset-0 w-full h-full z-0 overflow-hidden pointer-events-none">
+      {/* FONDO ANIMADO - Ahora fijo para que no se mueva al scrollear el form */}
+      <div className="fixed inset-0 w-full h-full z-0 pointer-events-none">
         {BACKGROUND_IMAGES.map((img, index) => (
           <div 
             key={index} 
@@ -117,7 +118,8 @@ export default function Auth() {
         <div className="absolute inset-0 bg-black/40"></div>
       </div>
 
-      <div className="relative z-10 h-full w-full overflow-y-auto overflow-x-hidden flex flex-col md:flex-row items-center justify-around py-12 px-6 md:px-20 lg:px-32">
+      {/* CONTENIDO PRINCIPAL - py-12 para dar margen en móviles al final del scroll */}
+      <div className="relative z-10 min-h-screen w-full flex flex-col md:flex-row items-center justify-around py-12 px-6 md:px-20 lg:px-32">
         
         <div className="mb-12 md:mb-0 md:text-left text-center max-w-xl flex flex-col gap-6">
             <h1 className="text-6xl md:text-7xl lg:text-8xl font-black italic tracking-tighter leading-none select-none drop-shadow-2xl">
