@@ -19,29 +19,25 @@ export default function WelcomePage({ userName }) {
   }, []);
 
   return (
-    <div className="fixed inset-0 w-screen h-screen bg-gray-900 overflow-hidden font-sans">
+    /* CAMBIO: Quitamos 'fixed' y 'overflow-hidden'. Usamos 'min-h-screen' y 'relative' */
+    <div className="relative min-h-screen w-full bg-gray-900 font-sans overflow-y-auto">
       
-      {/* CAPA DE FONDO OPTIMIZADA */}
+      {/* CAPA DE FONDO OPTIMIZADA - Esta sí queda fija para que no se mueva al scrollear */}
       <div className="fixed inset-0 w-full h-full z-0 pointer-events-none">
-          {/* IMPORTANTE: Solo renderizamos la imagen actual para que el navegador 
-             no descargue las 4 de golpe al inicio.
-          */}
           <div className="absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out">
             <img 
-              key={BACKGROUND_IMAGES[currentImageIndex]} // La key fuerza el refresco de la animación
+              key={BACKGROUND_IMAGES[currentImageIndex]} 
               src={BACKGROUND_IMAGES[currentImageIndex]} 
               alt="gym background" 
               loading="eager"
               className="w-full h-full object-cover grayscale brightness-[0.4] animate-fade-in scale-105" 
             />
           </div>
-
-          {/* Capa oscura para legibilidad */}
           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80"></div>
       </div>
 
-      {/* CONTENIDO PRINCIPAL */}
-      <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-4 sm:px-6 lg:px-8">
+      {/* CONTENIDO PRINCIPAL - Añadimos padding vertical (py-12) para que no pegue a los bordes al scrollear */}
+      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center text-center px-4 py-12 sm:px-6 lg:px-8">
         
         <div className="mb-4 md:mb-8 animate-fade-in-down">
             <h1 className="text-5xl md:text-8xl font-black italic tracking-tighter leading-none select-none drop-shadow-2xl">
