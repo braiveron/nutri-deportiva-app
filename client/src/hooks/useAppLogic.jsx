@@ -87,9 +87,10 @@ export function useAppLogic() {
   }, []);
 
   // --- 1. GESTIÓN DE SESIÓN ---
-  useEffect(() => {
+ useEffect(() => {
     const initSession = async () => {
       try {
+        // Pequeño margen para que el SW se asiente antes de la primera petición
         const { data: { session: activeSession }, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -99,16 +100,18 @@ export function useAppLogic() {
           }
           throw error;
         }
-
         setSession(activeSession);
       } catch (err) {
         console.error("Error inicializando sesión:", err);
       } finally {
-        // Si no hay sesión, matamos el loader aquí
-        const { data } = await supabase.auth.getSession();
-        if (!data.session) setCheckingBiometrics(false);
+        // Si después de 500ms no hay sesión, liberamos el spinner de biometría
+        // para que el usuario pueda ver el login/bienvenida
+        setTimeout(async () => {
+          const { data } = await supabase.auth.getSession();
+          if (!data?.session) setCheckingBiometrics(false);
+        }, 500);
       }
-    };
+    }
 
     initSession();
 
@@ -155,11 +158,11 @@ export function useAppLogic() {
   useEffect(() => {
     const criticalTimeout = setTimeout(() => {
       if (checkingBiometrics || loadingRole) {
-        console.warn("Forzando desbloqueo de interfaz por timeout de red.");
+        console.warn("Liberando interfaz por precaución.");
         setCheckingBiometrics(false);
         setLoadingRole(false);
       }
-    }, 10000); // 10 segundos máximo de espera
+    }, 3000); 
 
     return () => clearTimeout(criticalTimeout);
   }, [checkingBiometrics, loadingRole]);

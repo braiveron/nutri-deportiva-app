@@ -16,13 +16,17 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 // 1. OBTENER LOGS DE UN DÍA
 exports.getDailyLogs = async (req, res) => {
   const { id } = req.params;
-  const { date } = req.query;
+  // Si no viene fecha en la URL, generamos la de hoy automáticamente
+  const today = new Date().toISOString().split("T")[0];
+  const filterDate = req.query.date || today;
 
   try {
-    let query = supabase.from("daily_logs").select("*").eq("user_id", id);
-    if (date) query = query.eq("date", date);
+    const { data, error } = await supabase
+      .from("daily_logs")
+      .select("*")
+      .eq("user_id", id)
+      .eq("date", filterDate); // <--- Ahora SIEMPRE filtra por una fecha
 
-    const { data, error } = await query;
     if (error) throw error;
     res.json({ success: true, logs: data });
   } catch (error) {
