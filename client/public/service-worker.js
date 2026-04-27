@@ -1,5 +1,3 @@
-/* eslint-disable no-restricted-globals */
-
 // Instalación: Fuerza al SW a activarse de inmediato
 self.addEventListener("install", () => {
   self.skipWaiting();

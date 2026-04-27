@@ -152,7 +152,8 @@ export function useAppLogic() {
          return () => clearTimeout(timer);
       }
     }
-  }, [session?.user?.id, fetchUserProfile, loadBiometrics]);
+  }, // eslint-disable-next-line react-hooks/exhaustive-deps
+   [session?.user?.id, fetchUserProfile, loadBiometrics]);
 
   // --- 3. GUARDIA DE EMERGENCIA (Anti-Spinner Infinito) ---
   useEffect(() => {
