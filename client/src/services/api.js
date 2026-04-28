@@ -11,12 +11,9 @@ const API_URL = isLocal
 
 console.log("🌍 Entorno:", isLocal ? "LOCAL" : "PRODUCCIÓN");
 
-// Función auxiliar para fechas (para evitar problemas de zona horaria)
+// BUSCA ESTA FUNCIÓN Y REEMPLÁZALA:
 const getLocalDate = () => {
-  const date = new Date();
-  const offset = date.getTimezoneOffset();
-  const localDate = new Date(date.getTime() - offset * 60 * 1000);
-  return localDate.toISOString().split("T")[0];
+  return new Date().toLocaleDateString("en-CA"); // Retorna YYYY-MM-DD en hora local
 };
 
 export const api = {
@@ -247,11 +244,11 @@ export const api = {
     });
     return await response.json();
   },
-  addWeightLog: async (userId, weight, date) => {
+  addWeightLog: async (userId, weight, date, extraData = {}) => {
     const response = await fetch(`${API_URL}/weight/add`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, weight, date }),
+      body: JSON.stringify({ userId, weight, date, ...extraData }),
     });
     return await response.json();
   },

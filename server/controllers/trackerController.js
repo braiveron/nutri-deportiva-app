@@ -17,7 +17,7 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 exports.getDailyLogs = async (req, res) => {
   const { id } = req.params;
   // Si no viene fecha en la URL, generamos la de hoy automáticamente
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toLocaleDateString("en-CA");
   const filterDate = req.query.date || today;
 
   try {
@@ -49,7 +49,7 @@ exports.addDailyLog = async (req, res) => {
           protein,
           carbs,
           fats,
-          date: date || new Date().toISOString().split("T")[0],
+          date: date || new Date().toLocaleDateString("en-CA"),
         },
       ])
       .select()
@@ -179,24 +179,44 @@ exports.deleteUserAccount = async (req, res) => {
   }
 };
 
-// 6. REGISTRAR PESO
+// ... (Tus imports y funciones anteriores se mantienen igual)
+
+// 6. REGISTRAR PESO (Y BIOMETRÍA) 🚀 ACTUALIZADO
 exports.addWeightLog = async (req, res) => {
-  const { userId, weight, date } = req.body;
+  // Ahora extraemos todos los campos que envía el nuevo WeightTracker
+  const { userId, weight, date, waist, neck, hip, fat_percentage } = req.body;
+
   if (!userId || !weight) {
-    return res.status(400).json({ success: false, error: "Faltan datos" });
+    return res
+      .status(400)
+      .json({
+        success: false,
+        error: "Faltan datos obligatorios (userId o weight)",
+      });
   }
 
   try {
     const { data, error } = await supabase
       .from("weight_logs")
-      .insert([{ user_id: userId, weight, date }])
+      .insert([
+        {
+          user_id: userId,
+          weight: parseFloat(weight),
+          date: date || new Date().toLocaleDateString("en-CA"),
+          // Agregamos las nuevas columnas:
+          waist: waist ? parseFloat(waist) : null,
+          neck: neck ? parseFloat(neck) : null,
+          hip: hip ? parseFloat(hip) : null,
+          fat_percentage: fat_percentage ? parseFloat(fat_percentage) : null,
+        },
+      ])
       .select()
       .single();
 
     if (error) throw error;
     res.json({ success: true, log: data });
   } catch (error) {
-    console.error("Error guardando peso:", error);
+    console.error("Error guardando peso y biometría:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
