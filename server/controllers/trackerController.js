@@ -179,20 +179,17 @@ exports.deleteUserAccount = async (req, res) => {
   }
 };
 
-// ... (Tus imports y funciones anteriores se mantienen igual)
-
 // 6. REGISTRAR PESO (Y BIOMETRÍA) 🚀 ACTUALIZADO
 exports.addWeightLog = async (req, res) => {
-  // Ahora extraemos todos los campos que envía el nuevo WeightTracker
+  // Extraemos TODOS los campos que ahora manda el frontend
   const { userId, weight, date, waist, neck, hip, fat_percentage } = req.body;
 
-  if (!userId || !weight) {
-    return res
-      .status(400)
-      .json({
-        success: false,
-        error: "Faltan datos obligatorios (userId o weight)",
-      });
+  // Validación estricta: Si no hay peso, devolvemos 400 (que es el error que veías)
+  if (!userId || weight === undefined || weight === "") {
+    return res.status(400).json({
+      success: false,
+      error: "El peso es obligatorio para registrar cualquier métrica.",
+    });
   }
 
   try {
@@ -203,7 +200,7 @@ exports.addWeightLog = async (req, res) => {
           user_id: userId,
           weight: parseFloat(weight),
           date: date || new Date().toLocaleDateString("en-CA"),
-          // Agregamos las nuevas columnas:
+          // Guardamos las medidas solo si existen, si no, van como null
           waist: waist ? parseFloat(waist) : null,
           neck: neck ? parseFloat(neck) : null,
           hip: hip ? parseFloat(hip) : null,
@@ -214,6 +211,7 @@ exports.addWeightLog = async (req, res) => {
       .single();
 
     if (error) throw error;
+
     res.json({ success: true, log: data });
   } catch (error) {
     console.error("Error guardando peso y biometría:", error);

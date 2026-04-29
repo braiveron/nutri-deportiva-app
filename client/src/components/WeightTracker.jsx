@@ -91,36 +91,54 @@ export default function WeightTracker({ userId, onWeightAdded }) {
     return fat.toFixed(1);
   };
 
-  const handleSave = async (e) => {
-    e.preventDefault();
-    let payload = { weight: newWeight, date };
+ const handleSave = async (e) => {
+  e.preventDefault();
+  
+  // Determinamos si estamos en una pestaña de biometría (Medidas o Grasa)
+  const isBiometric = activeMetric === 'waist' || activeMetric === 'fat_percentage';
+  
+  // Si es biometría, el peso es opcional (usa el último) o el del input si el usuario escribió algo
+  // Si es la pestaña de peso, el peso es obligatorio
+  const weightToSave = newWeight || (history.length > 0 ? history[history.length - 1].weightVal : "");
 
-    if (activeMetric === 'waist') {
-      const fat = calculateBodyFat(waist, neck, hip);
-      payload = { 
-        ...payload, 
-        waist, neck, hip, 
-        fat_percentage: fat,
-        weight: newWeight || (history.length > 0 ? history[history.length - 1].weightVal : "") 
-      };
-    }
+  if (!weightToSave) {
+    alert("Por favor, ingresa un peso inicial.");
+    return;
+  }
 
-    try {
-      const res = await api.addWeightLog(userId, payload.weight, payload.date, payload);
-      if (res.success) {
-        setNewWeight("");
-        setWaist("");
-        setNeck("");
-        setHip("");
-        loadHistory();
-        if (onWeightAdded) onWeightAdded();
-      } else {
-        alert("Error al guardar");
-      }
-    } catch (error) {
-        console.error(error);
-    }
+  let payload = { 
+    weight: weightToSave, 
+    date 
   };
+
+  if (isBiometric) {
+    const fat = calculateBodyFat(waist, neck, hip);
+    payload = { 
+      ...payload, 
+      waist, 
+      neck, 
+      hip, 
+      fat_percentage: fat
+    };
+  }
+
+  try {
+    const res = await api.addWeightLog(userId, payload.weight, payload.date, payload);
+    if (res.success) {
+      setNewWeight("");
+      setWaist("");
+      setNeck("");
+      setHip("");
+      loadHistory();
+      if (onWeightAdded) onWeightAdded();
+    } else {
+      alert("Error al guardar: " + (res.error || "Servidor no responde"));
+    }
+  } catch (error) {
+      console.error(error);
+      alert("Error de conexión al guardar");
+  }
+};
 
   const metricConfig = {
     weight: { key: 'weightVal', label: 'Peso', unit: ' kg', color: '#dc2626' },
