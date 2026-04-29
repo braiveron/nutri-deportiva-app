@@ -69,10 +69,33 @@ export default function Auth() {
     setErrors(newErrors);
     return valid;
   };
+  const handleResetPassword = async (e) => {
+  e.preventDefault();
+  if (!email) {
+    setErrors({ ...errors, email: "Ingresa tu correo para continuar." });
+    return;
+  }
+  setLoading(true);
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`, 
+    });
+    if (error) throw error;
+    setSuccessMsg("¡Email de recuperación enviado!");
+  } catch {
+    setErrors({ ...errors, general: "Error al enviar el correo de recuperación." });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrors({ email: '', password: '', general: '' });
+    if (view === 'recovery') {
+    handleResetPassword(e);
+    return;
+  }
     if (!validarFormulario()) return;
     setLoading(true);
     try {
@@ -95,6 +118,7 @@ export default function Auth() {
       setLoading(false);
     }
   };
+
 
   return (
     /* CORRECCIÓN: Usamos relative y min-h-screen con overflow-y-auto para permitir scroll en móviles */
@@ -197,8 +221,8 @@ export default function Auth() {
                         </div>
                     )}
                     <button type="submit" disabled={loading} className="w-full py-3 bg-gray-900 text-white font-bold text-xl uppercase hover:bg-sportRed transition-colors disabled:opacity-50">
-                        {loading ? '...' : (view === 'login' ? 'ENTRAR' : 'CREAR CUENTA')}
-                    </button>
+    {loading ? '...' : (view === 'login' ? 'ENTRAR' : view === 'register' ? 'CREAR CUENTA' : 'ENVIAR MAIL')}
+</button>
                 </form>
 
                 <div className="mt-8 flex flex-col items-center">
@@ -224,9 +248,31 @@ export default function Auth() {
                     </button>
                 </div>
 
-                <div className="mt-8 text-center border-t border-gray-100 pt-5">
-                    <button onClick={() => setView(view === 'login' ? 'register' : 'login')} className="text-sportRed font-bold uppercase text-xs hover:underline tracking-widest">
-                        {view === 'login' ? "Regístrate Gratis" : "Inicia Sesión aquí"}
+                <div className="mt-8 text-center border-t border-gray-100 pt-5 flex flex-col gap-3">
+                    {view === 'login' && (
+                        <button 
+                            type="button"
+                            onClick={() => {
+                                setView('recovery');
+                                setErrors({ email: '', password: '', general: '' });
+                                setSuccessMsg('');
+                            }} 
+                            className="text-gray-400 font-bold uppercase text-[10px] hover:text-sportRed transition-colors tracking-widest"
+                        >
+                            ¿Olvidaste tu contraseña?
+                        </button>
+                    )}
+
+                    <button 
+                        type="button"
+                        onClick={() => {
+                            setView(view === 'login' ? 'register' : 'login');
+                            setSuccessMsg('');
+                            setErrors({ email: '', password: '', general: '' });
+                        }} 
+                        className="text-sportRed font-bold uppercase text-xs hover:underline tracking-widest"
+                    >
+                        {view === 'login' ? "Regístrate Gratis" : "Volver al Inicio de Sesión"}
                     </button>
                 </div>
             </div>
