@@ -3,6 +3,12 @@ import { useState } from 'react';
 export default function SubscriptionStatus({ userRole, subscriptionEnd, autoRenew, onCancel, onSubscribe }) {
   const [loading, setLoading] = useState(false);
 
+  // VALIDACIÓN: ¿La suscripción ya expiró?
+  const isExpired = subscriptionEnd ? new Date(subscriptionEnd) < new Date() : false;
+  
+  // Si el rol es pro pero ya expiró, lo tratamos como "free" visualmente
+  const effectiveRole = isExpired ? 'free' : userRole;
+
   // Formatear fecha bonita (ej: 25 de Febrero, 2026)
   const formatearFecha = (fechaISO) => {
     if (!fechaISO) return "---";
@@ -17,19 +23,20 @@ export default function SubscriptionStatus({ userRole, subscriptionEnd, autoRene
     setLoading(false);
   };
 
-  // CASO 1: USUARIO FREE
-  if (userRole !== 'pro') {
+// CASO 1: USUARIO FREE (O PRO EXPIRADO)
+  if (effectiveRole !== 'pro') {
     return (
         <div className="w-full max-w-5xl bg-gray-900 text-white p-6 border-l-4 border-gray-600 flex flex-col md:flex-row justify-between items-center gap-4 mb-8 shadow-lg">
             <div>
-                <h3 className="text-xl font-display font-bold uppercase italic text-gray-400">Estado: <span className="text-white">GRATUITO</span></h3>
-                <p className="text-xs text-gray-400">Sube a PRO para desbloquear Chef y Entrenador IA.</p>
+                <h3 className="text-xl font-display font-bold uppercase italic text-gray-400">
+                  Estado: <span className="text-white">{isExpired ? 'PRO EXPIRADO' : 'GRATUITO'}</span>
+                </h3>
+                <p className="text-xs text-gray-400">
+                  {isExpired ? 'Tu suscripción terminó. Renueva para seguir usando la IA.' : 'Sube a PRO para desbloquear Chef y Entrenador IA.'}
+                </p>
             </div>
-            <button 
-                onClick={onSubscribe}
-                className="bg-sportRed hover:bg-red-700 text-white px-6 py-2 rounded-sm uppercase font-bold text-xs tracking-widest transition-all"
-            >
-                Mejorar a PRO ($4.99)
+            <button onClick={onSubscribe} className="...">
+                {isExpired ? 'Renovar Suscripción' : 'Mejorar a PRO ($4.99)'}
             </button>
         </div>
     );

@@ -46,9 +46,41 @@ exports.obtenerPlan = async (req, res) => {
       .select("*")
       .eq("id", userId)
       .single();
+
     if (error) throw error;
+
+    // --- LÓGICA DE AUTO-EXPIRACIÓN ---
+    // Si el usuario es PRO, chequeamos si su tiempo se terminó
+    if (data.subscription_tier === "pro" && data.subscription_end_date) {
+      const hoy = new Date();
+      const vencimiento = new Date(data.subscription_end_date);
+
+      if (hoy > vencimiento) {
+        console.log(
+          `⚠️ Suscripción expirada para el usuario ${userId}. Downgrade a 'free'.`,
+        );
+
+        // 1. Actualizamos la base de datos a 'free' o 'user'
+        const { data: updatedData } = await supabase
+          .from("profiles")
+          .update({
+            subscription_tier: "free", // o "user", según manejes el rol básico
+            subscription_status: "expired",
+            updated_at: new Date(),
+          })
+          .eq("id", userId)
+          .select()
+          .single();
+
+        // 2. Devolvemos los datos ya actualizados al frontend
+        return res.json({ existe: true, datos: updatedData });
+      }
+    }
+
+    // Si no ha expirado o no es PRO, devolvemos los datos normales
     res.json({ existe: true, datos: data });
   } catch (error) {
+    console.error("Error en obtenerPlan:", error);
     res.json({ existe: false, error: "Perfil no encontrado" });
   }
 };
