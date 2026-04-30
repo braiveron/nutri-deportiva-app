@@ -120,8 +120,6 @@ export default function AdminPage({ userRole }) {
 
   const toggleCouponStatus = async (id, currentStatus) => {
     try {
-      setPaymentModal(prev => ({ ...prev, show: false }));
-      
       const { error } = await supabase
         .from('coupons')
         .update({ is_active: !currentStatus })
@@ -138,10 +136,9 @@ export default function AdminPage({ userRole }) {
         type: 'success'
       });
     } catch (error) {
-      console.error("Error completo:", error);
       setStatusModal({ 
         show: true, 
-        title: 'Error de Actualización', 
+        title: 'Error', 
         message: error.message, 
         type: 'error' 
       });
@@ -157,7 +154,7 @@ export default function AdminPage({ userRole }) {
 
       if (error) throw error;
 
-      fetchCoupons();
+      await fetchCoupons();
       setStatusModal({
         show: true,
         title: 'Eliminado',
@@ -269,7 +266,7 @@ export default function AdminPage({ userRole }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8 animate-fade-in pt-24 font-sans text-black">
+    <div className="min-h-screen bg-gray-100 p-4 md:p-8 animate-fade-in pt-24 font-sans text-black">
       <div className="max-w-6xl mx-auto">
         
         {/* HEADER */}
@@ -348,8 +345,8 @@ export default function AdminPage({ userRole }) {
                             />
                         </div>
 
-                        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                            <table className="w-full text-left border-collapse">
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-x-auto">
+                            <table className="w-full text-left border-collapse min-w-[600px]">
                                 <thead>
                                     <tr className="bg-gray-50 border-b border-gray-200">
                                         <th className="p-4 text-[10px] font-bold text-gray-400 uppercase">Usuario</th>
@@ -419,8 +416,8 @@ export default function AdminPage({ userRole }) {
                       </button>
                     </div>
 
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                      <table className="w-full text-left">
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-x-auto">
+                      <table className="w-full text-left min-w-[500px]">
                         <thead className="bg-gray-50 border-b border-gray-200">
                           <tr>
                             <th className="p-4 text-[10px] font-bold text-gray-400 uppercase">Código</th>
@@ -444,17 +441,17 @@ export default function AdminPage({ userRole }) {
                              </td>
                              <td className="p-4 text-right">
                                <div className="flex justify-end gap-2">
-                                <button 
+                                 <button 
                                     onClick={() => toggleCouponStatus(coupon.id, coupon.is_active)}
                                     className={`px-3 py-1 rounded text-[9px] font-black uppercase transition-all shadow-sm ${
                                         coupon.is_active 
-                                        ? 'bg-green-100 text-green-600 hover:bg-orange-100 hover:text-orange-600' 
-                                        : 'bg-gray-100 text-gray-400 hover:bg-green-100 hover:text-green-600'
+                                        ? 'bg-green-100 text-green-600 hover:bg-red-50 hover:text-red-600' 
+                                        : 'bg-gray-100 text-gray-400 hover:bg-green-50 hover:text-green-600'
                                     }`}
-                                >
+                                 >
                                     {coupon.is_active ? 'Activo' : 'Pausado'}
-                                </button>
-                                <button 
+                                 </button>
+                                 <button 
                                     onClick={() => {
                                         setPaymentModal({
                                             show: true,
@@ -469,9 +466,9 @@ export default function AdminPage({ userRole }) {
                                     }}
                                     className="p-1.5 rounded bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all shadow-sm"
                                     title="Eliminar"
-                                >
+                                 >
                                     🗑️
-                                </button>
+                                 </button>
                                </div>
                             </td>
                           </tr>
@@ -486,6 +483,7 @@ export default function AdminPage({ userRole }) {
         )}
       </div>
 
+      {/* ... (Resto de los modales se mantienen igual) ... */}
       {/* MODAL CREAR CUPÓN */}
       {isCouponModalOpen && (
         <div className="fixed inset-0 z-[1001] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
