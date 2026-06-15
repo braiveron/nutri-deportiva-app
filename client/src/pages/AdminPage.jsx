@@ -13,7 +13,7 @@ export default function AdminPage({ userRole }) {
   const [selectedUser, setSelectedUser] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isCouponModalOpen, setIsCouponModalOpen] = useState(false); 
-  const [newCoupon, setNewCoupon] = useState({ code: '', discount_percent: 0, free_days: 0, expiration_days: 30 });
+  const [newCoupon, setNewCoupon] = useState({ code: '', discount_percent: 0, free_days: 0, expiration_days: 30, usage_limit: 10 });
   const [paymentModal, setPaymentModal] = useState({
     show: false,
     type: 'confirm',
@@ -90,7 +90,7 @@ export default function AdminPage({ userRole }) {
           type: parseInt(newCoupon.discount_percent) > 0 ? 'mixed' : 'free_days', 
           value: parseInt(newCoupon.free_days),
           discount_percent: parseInt(newCoupon.discount_percent),
-          usage_limit: 10, 
+          usage_limit: parseInt(newCoupon.usage_limit) || 10, 
           usage_count: 0,
           expires_at: expirationDate.toISOString() 
         }]);
@@ -98,7 +98,7 @@ export default function AdminPage({ userRole }) {
       if (error) throw error;
       
       setIsCouponModalOpen(false);
-      setNewCoupon({ code: '', discount_percent: 0, free_days: 0, expiration_days: 30 });
+      setNewCoupon({ code: '', discount_percent: 0, free_days: 0, expiration_days: 30, usage_limit: 10 });
       fetchCoupons();
 
       setStatusModal({
@@ -175,20 +175,15 @@ export default function AdminPage({ userRole }) {
         ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() 
         : null;
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('profiles')
         .update({ 
           subscription_tier: newTier,
           subscription_end_date: newDate 
         })
-        .eq('id', userId)
-        .select(); 
+        .eq('id', userId);
 
       if (error) throw error;
-
-      if (!data || data.length === 0) {
-        throw new Error("No tienes permisos para modificar este usuario.");
-      }
 
       setUsers(prev => prev.map(u => 
         u.id === userId ? { ...u, subscription_tier: newTier, subscription_end_date: newDate } : u
@@ -423,6 +418,7 @@ export default function AdminPage({ userRole }) {
                             <th className="p-4 text-[10px] font-bold text-gray-400 uppercase">Código</th>
                             <th className="p-4 text-[10px] font-bold text-gray-400 uppercase text-center">Free</th>
                             <th className="p-4 text-[10px] font-bold text-gray-400 uppercase text-center">Descuento (%)</th>
+                            <th className="p-4 text-[10px] font-bold text-gray-400 uppercase text-center">Usos</th>
                             <th className="p-4 text-[10px] font-bold text-gray-400 uppercase text-center">Vence</th>
                             <th className="p-4 text-[10px] font-bold text-gray-400 uppercase text-right">Acciones</th>
                           </tr>
@@ -436,6 +432,19 @@ export default function AdminPage({ userRole }) {
                              <td className="p-4 font-black text-gray-900">{coupon.code}</td>
                              <td className="p-4 text-center font-bold text-sportRed">{coupon.value} días</td> 
                              <td className="p-4 text-center font-bold text-gray-600">{coupon.discount_percent || 0}%</td>
+                             <td className="p-4 text-center">
+      <div className="flex flex-col items-center">
+        <span className="text-xs font-black text-gray-900">
+          {coupon.usage_count || 0} / {coupon.usage_limit || '∞'}
+        </span>
+        <div className="w-16 h-1 bg-gray-100 rounded-full mt-1 overflow-hidden">
+          <div 
+            className="h-full bg-sportRed" 
+            style={{ width: `${Math.min(((coupon.usage_count || 0) / (coupon.usage_limit || 1)) * 100, 100)}%` }}
+          />
+        </div>
+      </div>
+    </td>
                              <td className="p-4 text-center text-xs text-gray-500">
                                {coupon.expires_at ? new Date(coupon.expires_at).toLocaleDateString() : 'Sin límite'}
                              </td>
@@ -482,8 +491,6 @@ export default function AdminPage({ userRole }) {
             </div>
         )}
       </div>
-
-      {/* ... (Resto de los modales se mantienen igual) ... */}
       {/* MODAL CREAR CUPÓN */}
       {isCouponModalOpen && (
         <div className="fixed inset-0 z-[1001] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">

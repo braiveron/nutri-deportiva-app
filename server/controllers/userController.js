@@ -335,34 +335,44 @@ exports.createCoupon = async (req, res) => {
   }
 };
 
-// 2. Para que el usuario canjee (User)
 exports.redeemCoupon = async (req, res) => {
   const { userId, couponCode } = req.body;
+
   try {
+    // 1. Buscar el cupón y validar existencia
     const { data: coupon, error: couponError } = await supabase
       .from("coupons")
       .select("*")
       .eq("code", couponCode.toUpperCase())
       .single();
 
-    if (couponError || !coupon)
+    if (couponError || !coupon) {
       return res
         .status(404)
         .json({ success: false, error: "Cupón no válido ❌" });
+    }
 
-    // Validaciones
+    // 2. Validaciones de Seguridad
+    if (!coupon.is_active) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Este cupón está pausado ✋" });
+    }
+
     if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) {
       return res
         .status(400)
         .json({ success: false, error: "El cupón ha expirado ⏰" });
     }
+
+    // Validación CRÍTICA: Límite de uso
     if (coupon.usage_count >= coupon.usage_limit) {
       return res
         .status(400)
         .json({ success: false, error: "Cupón agotado 🛑" });
     }
 
-    // Verificar si el usuario ya lo usó
+    // 3. Verificar si el usuario ya lo usó (para evitar duplicados)
     const { data: alreadyUsed } = await supabase
       .from("coupon_usage")
       .select("*")
@@ -370,41 +380,78 @@ exports.redeemCoupon = async (req, res) => {
       .eq("user_id", userId)
       .single();
 
-    if (alreadyUsed)
+    if (alreadyUsed) {
       return res
         .status(400)
-        .json({ success: false, error: "Ya usaste este cupón ✋" });
-
-    // Aplicar beneficio (Días Gratis)
-    if (coupon.type === "free_days") {
-      const fechaVencimiento = new Date();
-      fechaVencimiento.setDate(fechaVencimiento.getDate() + coupon.value);
-
-      await supabase
-        .from("profiles")
-        .update({
-          subscription_tier: "pro",
-          subscription_status: "active",
-          subscription_end_date: fechaVencimiento.toISOString(),
-          updated_at: new Date(),
-        })
-        .eq("id", userId);
+        .json({
+          success: false,
+          error: "Ya canjeaste este código anteriormente ✋",
+        });
     }
 
-    // Registrar uso
+    // 4. APLICAR BENEFICIO SEGÚN TIPO
+    let newEndDate = null;
+
+    if (coupon.type === "free_days" || coupon.type === "mixed") {
+      const daysToAdd = parseInt(coupon.value);
+      const hoy = new Date();
+
+      // Si ya tiene una suscripción activa, sumamos a partir de la fecha de vencimiento actual
+      // Si no, sumamos a partir de hoy.
+      const { data: userProfile } = await supabase
+        .from("profiles")
+        .select("subscription_end_date")
+        .eq("id", userId)
+        .single();
+
+      const baseDate =
+        userProfile?.subscription_end_date &&
+        new Date(userProfile.subscription_end_date) > hoy
+          ? new Date(userProfile.subscription_end_date)
+          : hoy;
+
+      baseDate.setDate(baseDate.getDate() + daysToAdd);
+      newEndDate = baseDate.toISOString();
+    }
+
+    // 5. OPERACIÓN ATÓMICA: Registrar uso, Incrementar contador y Actualizar perfil
+    // Usamos un RPC o updates individuales (aquí te muestro el camino estándar)
+
+    // A. Registrar en tabla de historial
     await supabase
       .from("coupon_usage")
       .insert([{ coupon_id: coupon.id, user_id: userId }]);
+
+    // B. Incrementar contador en la tabla de cupones
     await supabase
       .from("coupons")
       .update({ usage_count: coupon.usage_count + 1 })
       .eq("id", coupon.id);
 
+    // C. Actualizar suscripción del usuario
+    const { data: updatedProfile, error: updateError } = await supabase
+      .from("profiles")
+      .update({
+        subscription_tier: "pro",
+        subscription_status: "active",
+        subscription_end_date: newEndDate,
+        updated_at: new Date(),
+      })
+      .eq("id", userId)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+
     res.json({
       success: true,
-      message: `¡Activado! +${coupon.value} días PRO 🚀`,
+      message: `¡Activado! Se han sumado ${coupon.value} días a tu cuenta 🚀`,
+      data: updatedProfile,
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error("Error en redeemCoupon:", error);
+    res
+      .status(500)
+      .json({ success: false, error: "Error interno al procesar el cupón" });
   }
 };
