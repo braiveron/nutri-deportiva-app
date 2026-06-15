@@ -330,8 +330,11 @@ export default function AdminPage({ userRole }) {
                 {activeTab === 'users' && (
                     <div className="animate-fade-in">
                         <div className="mb-6 relative group">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                            {/* CORRECCIÓN 1: Convertido el emoji en Label y conectado al Input */}
+                            <label htmlFor="user-search" className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 cursor-text">🔍</label>
                             <input 
+                                id="user-search"
+                                name="user-search"
                                 type="text"
                                 placeholder="BUSCAR POR NOMBRE O EMAIL..."
                                 value={searchTerm}
@@ -425,7 +428,7 @@ export default function AdminPage({ userRole }) {
                         </thead>
                         <tbody>
                           {coupons.length === 0 ? (
-                            <tr><td colSpan="5" className="p-12 text-center text-gray-400 italic">No hay cupones creados.</td></tr>
+                            <tr><td colSpan="6" className="p-12 text-center text-gray-400 italic">No hay cupones creados.</td></tr>
                           ) : (
                             coupons.map(coupon => (
                             <tr key={coupon.id} className="border-b border-gray-50">
@@ -433,18 +436,18 @@ export default function AdminPage({ userRole }) {
                              <td className="p-4 text-center font-bold text-sportRed">{coupon.value} días</td> 
                              <td className="p-4 text-center font-bold text-gray-600">{coupon.discount_percent || 0}%</td>
                              <td className="p-4 text-center">
-      <div className="flex flex-col items-center">
-        <span className="text-xs font-black text-gray-900">
-          {coupon.usage_count || 0} / {coupon.usage_limit || '∞'}
-        </span>
-        <div className="w-16 h-1 bg-gray-100 rounded-full mt-1 overflow-hidden">
-          <div 
-            className="h-full bg-sportRed" 
-            style={{ width: `${Math.min(((coupon.usage_count || 0) / (coupon.usage_limit || 1)) * 100, 100)}%` }}
-          />
-        </div>
-      </div>
-    </td>
+                              <div className="flex flex-col items-center">
+                                <span className="text-xs font-black text-gray-900">
+                                  {coupon.usage_count || 0} / {coupon.usage_limit || '∞'}
+                                </span>
+                                <div className="w-16 h-1 bg-gray-100 rounded-full mt-1 overflow-hidden">
+                                  <div 
+                                    className="h-full bg-sportRed" 
+                                    style={{ width: `${Math.min(((coupon.usage_count || 0) / (coupon.usage_limit || 1)) * 100, 100)}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </td>
                              <td className="p-4 text-center text-xs text-gray-500">
                                {coupon.expires_at ? new Date(coupon.expires_at).toLocaleDateString() : 'Sin límite'}
                              </td>
@@ -491,6 +494,7 @@ export default function AdminPage({ userRole }) {
             </div>
         )}
       </div>
+      
       {/* MODAL CREAR CUPÓN */}
       {isCouponModalOpen && (
         <div className="fixed inset-0 z-[1001] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -498,9 +502,13 @@ export default function AdminPage({ userRole }) {
             <h2 className="text-2xl font-black uppercase italic mb-6 text-gray-900">Nuevo Cupón</h2>
             <div className="space-y-4">
               <div className="space-y-4">
+                
+                {/* CORRECCIÓN 2a: Enlazado Label + Input para Código */}
                 <div>
-                  <label className="text-[10px] font-black text-gray-400 uppercase mb-1 block">Código</label>
+                  <label htmlFor="coupon-code" className="text-[10px] font-black text-gray-400 uppercase mb-1 block">Código</label>
                   <input 
+                    id="coupon-code"
+                    name="coupon-code"
                     type="text" 
                     className="w-full border rounded-xl p-3 font-bold uppercase text-sm focus:border-sportRed outline-none"
                     value={newCoupon.code}
@@ -510,9 +518,13 @@ export default function AdminPage({ userRole }) {
                 </div>
 
                 <div className="grid grid-cols-3 gap-3">
+                  
+                  {/* CORRECCIÓN 2b: Enlazado Label + Input para % Descuento */}
                   <div>
-                    <label className="text-[10px] font-black text-gray-400 uppercase mb-1 block">% Desc.</label>
+                    <label htmlFor="coupon-discount" className="text-[10px] font-black text-gray-400 uppercase mb-1 block">% Desc.</label>
                     <input 
+                      id="coupon-discount"
+                      name="coupon-discount"
                       type="number" 
                       className="w-full border rounded-xl p-3 font-bold text-sm outline-none"
                       value={newCoupon.discount_percent}
@@ -520,9 +532,12 @@ export default function AdminPage({ userRole }) {
                     />
                   </div>
 
+                  {/* CORRECCIÓN 2c: Enlazado Label + Input para Días Gratis */}
                   <div>
-                    <label className="text-[10px] font-black text-gray-400 uppercase mb-1 block">Días Gratis</label>
+                    <label htmlFor="coupon-free-days" className="text-[10px] font-black text-gray-400 uppercase mb-1 block">Días Gratis</label>
                     <input 
+                      id="coupon-free-days"
+                      name="coupon-free-days"
                       type="number" 
                       className="w-full border rounded-xl p-3 font-bold text-sm outline-none"
                       value={newCoupon.free_days}
@@ -530,9 +545,12 @@ export default function AdminPage({ userRole }) {
                     />
                   </div>
 
+                  {/* CORRECCIÓN 2d: Enlazado Label + Input para Expiración */}
                   <div>
-                    <label className="text-[10px] font-black text-gray-400 uppercase mb-1 block">Validez (días)</label>
+                    <label htmlFor="coupon-expiration" className="text-[10px] font-black text-gray-400 uppercase mb-1 block">Validez (días)</label>
                     <input 
+                      id="coupon-expiration"
+                      name="coupon-expiration"
                       type="number" 
                       className="w-full border rounded-xl p-3 font-bold text-sm outline-none"
                       value={newCoupon.expiration_days}
